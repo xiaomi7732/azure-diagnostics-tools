@@ -12,10 +12,10 @@ require "qpid-amqp-1-0-client-jms-0.32.jar"
 require "qpid-amqp-1-0-common-0.32.jar"
 
 
-# Reads events from Azure event-hub
-class LogStash::Inputs::Azureeventhub < LogStash::Inputs::Base
+# Reads events from Azure event-hub for Windows Azure Diagnostics
+class LogStash::Inputs::Azurewadeventhub < LogStash::Inputs::Base
 
-  config_name "azureeventhub"
+  config_name "azurewadeventhub"
   milestone 0
 
   default :codec, "json"
@@ -43,11 +43,35 @@ class LogStash::Inputs::Azureeventhub < LogStash::Inputs::Base
   def register
   end # def register
 
-  def get_pay_load(message)
+  def get_pay_load(message, partition)
     return nil if not message
     message.getPayload().each do |section|
-      if section.java_kind_of? org::apache::qpid::amqp_1_0::type::messaging::Data or section.java_kind_of? org::apache::qpid::amqp_1_0::type::messaging::AmqpValue
-        return section.getValue().to_s
+      if section.java_kind_of? org::apache::qpid::amqp_1_0::type::messaging::Data
+        data = ""
+        begin
+          event = LogStash::Event.new()
+          section.getValue().getArray().each do |byte|
+            data = data + byte.chr
+          end
+          json = JSON.parse(data)
+          # Check if the records field is there. All messages written by WAD should have
+          # "records" as the root element
+          if !json["records"].nil?
+            recordArray = json["records"]
+            recordArray.each do |record|
+              record.each do |name, value|
+                event[name] = value 
+              end
+            end
+          end
+          return event
+        rescue => e
+          if data != ""
+            @logger.error("  " + partition.to_s.rjust(2,"0") + " --- " + "Error: Unable to JSON parse '" + data + "'.", :exception => e)
+          else
+            @logger.error("  " + partition.to_s.rjust(2,"0") + " --- " + "Error: Unable to get the message body for message", :exception => e)
+          end 
+        end
       end
     end
     return nil
@@ -58,7 +82,8 @@ class LogStash::Inputs::Azureeventhub < LogStash::Inputs::Base
       begin
         msg = receiver.receive(10)
         if msg
-          codec.decode(get_pay_load(msg)) do |event|
+          event = get_pay_load(msg, partition)
+          if event
             output_queue << event
           end
           receiver.acknowledge(msg)
@@ -81,7 +106,6 @@ class LogStash::Inputs::Azureeventhub < LogStash::Inputs::Base
       begin
         filter = SelectorFilter.new "amqp.annotation.x-opt-enqueuedtimeutc > '" + @time_since_epoch_millis.to_s + "'"
         filters = { org::apache::qpid::amqp_1_0::type::Symbol.valueOf("apache.org:selector-filter:string") => filter }
-
         host = @namespace + "." + @domain
         connection = org::apache::qpid::amqp_1_0::client::Connection.new(host, @port, @username, @key, host, true)
         connection.getEndpoint().getDescribedTypeRegistry().register(filter.java_class, WriterFactory.new)
@@ -113,7 +137,7 @@ class LogStash::Inputs::Azureeventhub < LogStash::Inputs::Base
   public
   def teardown
   end # def teardown
-end # class LogStash::Inputs::Azureeventhub
+end # class LogStash::Inputs::Azurewadeventhub
 
 
 class SelectorFilter
