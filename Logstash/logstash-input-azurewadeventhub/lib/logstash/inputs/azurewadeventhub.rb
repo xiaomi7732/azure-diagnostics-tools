@@ -5,21 +5,18 @@ require "logstash/namespace"
 require "securerandom"
 require "open-uri"
 require "thread"
+require "json"
 
-require "geronimo-jms_1.1_spec-1.1.1.jar"
-require "qpid-amqp-1-0-client-0.32.jar"
-require "qpid-amqp-1-0-client-jms-0.32.jar"
-require "qpid-amqp-1-0-common-0.32.jar"
-
+require Dir[ File.dirname(__FILE__) + "/../../*_jars.rb" ].first
 
 # Reads events from Azure event-hub for Windows Azure Diagnostics
 class LogStash::Inputs::Azurewadeventhub < LogStash::Inputs::Base
 
   config_name "azurewadeventhub"
-  milestone 0
+  milestone 1
 
   default :codec, "json"
-  
+
   config :key, :validate => :string
   config :username, :validate => :string
   config :namespace, :validate => :string
@@ -31,7 +28,7 @@ class LogStash::Inputs::Azurewadeventhub < LogStash::Inputs::Base
   config :partitions, :validate => :number
   config :consumer_group, :validate => :string, :default => "$default"
   
-  config :time_since_epoch_millis, :validate => :number, :default => Time.now.to_i * 1000
+  config :time_since_epoch_millis, :validate => :number, :default => Time.now.utc.to_i * 1000
   config :thread_wait_sec, :validate => :number, :default => 5
   
   
@@ -78,7 +75,7 @@ class LogStash::Inputs::Azurewadeventhub < LogStash::Inputs::Base
   end
   
   def process(output_queue, receiver, partition)
-    while true
+    while !stop?
       begin
         msg = receiver.receive(10)
         if msg
@@ -102,7 +99,7 @@ class LogStash::Inputs::Azurewadeventhub < LogStash::Inputs::Base
   end # process
   
   def process_partition(output_queue, partition)
-    while true
+    while !stop?
       begin
         filter = SelectorFilter.new "amqp.annotation.x-opt-enqueuedtimeutc > '" + @time_since_epoch_millis.to_s + "'"
         filters = { org::apache::qpid::amqp_1_0::type::Symbol.valueOf("apache.org:selector-filter:string") => filter }
@@ -115,7 +112,7 @@ class LogStash::Inputs::Azurewadeventhub < LogStash::Inputs::Base
         process(output_queue,receiver,partition)
       rescue org::apache::qpid::amqp_1_0::client::ConnectionErrorException => e
         @logger.debug("  " + partition.to_s.rjust(2,"0") + " --- " + "resetting connection")
-        @time_since_epoch_millis = Time.now.to_i * 1000
+        @time_since_epoch_millis = Time.now.utc.to_i * 1000
       end
     end
   rescue LogStash::ShutdownSignal => e
