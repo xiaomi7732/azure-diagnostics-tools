@@ -3,7 +3,7 @@ Gem::Specification.new do |s|
   s.version       = '0.9.7'
   s.platform      = "java"
   s.licenses      = ['Apache License (2.0)']
-  s.summary       = "This plugin will collect Microsoft Azure Diagnostics data from Azure Event Hubs."
+  s.summary       = "This plugin collects Microsoft Azure Diagnostics data from Azure Event Hubs."
   s.description   = "This gem is a Logstash plugin. It reads and parses diagnostics data from Azure Event Hubs."
   s.authors       = ["Microsoft Corporation"]
   s.email         = 'azdiag@microsoft.com'
