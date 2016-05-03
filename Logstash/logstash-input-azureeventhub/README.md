@@ -1,91 +1,80 @@
-# Notice
-This plugin is a part of [Microsoft Azure Diagnostics with ELK](https://github.com/mspnp/semantic-logging/tree/v3/ELK).
+# Logstash input plugin for data from Event Hubs 
 
-[See more documentation.](https://github.com/mspnp/semantic-logging/blob/v3/ELK/md/LogstashExtensions.md#azure-wad-table)
+## Summary
+This plugin reads data from specified Azure Event Hubs.
 
-# Logstash Plugin
-
-This is a plugin for [Logstash](https://github.com/elasticsearch/logstash).
-
-It is fully free and fully open source. The license is Apache 2.0, meaning you are pretty much free to use it however you want in whatever way.
-
-## Documentation
-
-Logstash provides infrastructure to automatically generate documentation for this plugin. We use the asciidoc format to write documentation so any comments in the source code will be first converted into asciidoc and then into html. All plugin documentation are placed under one [central location](http://www.elasticsearch.org/guide/en/logstash/current/).
-
-- For formatting code or config example, you can use the asciidoc `[source,ruby]` directive
-- For more asciidoc formatting tips, see the excellent reference here https://github.com/elasticsearch/docs#asciidoc-guide
-
-## Need Help?
-
-Need help? Try #logstash on freenode IRC or the https://discuss.elastic.co/c/logstash discussion forum.
-
-## Developing
-
-### 1. Plugin Developement and Testing
-
-#### Code
-- To get started, you'll need JRuby with the Bundler gem installed.
-
-- Create a new plugin or clone and existing from the GitHub [logstash-plugins](https://github.com/logstash-plugins) organization. We also provide [example plugins](https://github.com/logstash-plugins?query=example).
-
-- Install dependencies
+## Installation
+You can install this plugin using the Logstash "plugin" or "logstash-plugin" (for newer versions of Logstash) command:
 ```sh
-bundle install
+logstash-plugin install logstash-input-azureeventhub
 ```
+For more information, see Logstash reference [Working with plugins](https://www.elastic.co/guide/en/logstash/current/working-with-plugins.html).
 
-#### Test
+## Configuration
+### Required Parameters
+__*key*__
 
-- Update your dependencies
+The shared access key to the target event hub.
 
-```sh
-bundle install
-```
+__*username*__
 
-- Run tests
+The name of the shared access policy.
 
-```sh
-bundle exec rspec
-```
+__*namespace*__
 
-### 2. Running your unpublished Plugin in Logstash
+Event Hub namespace.
 
-#### 2.1 Run in a local Logstash clone
+__*eventhub*__
 
-- Edit Logstash `Gemfile` and add the local plugin path, for example:
+Event Hub name.
+
+__*partitions*__
+
+Partition count of the target event hub.
+
+### Optional Parameters
+__*domain*__
+
+Domain of the target Event Hub. Default value is "servicebus.windows.net".
+
+__*port*__
+
+Port of the target Event Hub. Default value is 5671.
+
+__*receive_credits*__
+
+The credit number to limit the number of messages to receive in a processing cycle. Default value is 1000.
+
+__*consumer_group*__
+
+Name of the consumer group. Default value is "$default".
+
+__*time_since_epoch_millis*__
+
+Specifies the point of time after which the messages are received. Default value is the time when this plugin is initialized:
 ```ruby
-gem "logstash-filter-awesome", :path => "/your/local/logstash-filter-awesome"
+Time.now.utc.to_i * 1000
 ```
-- Install plugin
-```sh
-bin/plugin install --no-verify
+__*thread_wait_sec*__
+
+Specifies the time (in seconds) to wait before another try if no message was received.
+
+### Examples
 ```
-- Run Logstash with your plugin
-```sh
-bin/logstash -e 'filter {awesome {}}'
+input
+{
+    azurewadeventhub
+    {
+        key => "VGhpcyBpcyBhIGZha2Uga2V5Lg=="
+        username => "receivepolicy"
+        namespace => "mysbns"
+        eventhub => "myeventhub"
+        partitions => 4
+    }
+}
 ```
-At this point any modifications to the plugin code will be applied to this local Logstash setup. After modifying the plugin, simply rerun Logstash.
 
-#### 2.2 Run in an installed Logstash
+## More information
+The source code of this plugin is hosted in GitHub repo [Microsoft Azure Diagnostics with ELK](https://github.com/Azure/azure-diagnostics-tools). We welcome you to provide feedback and/or contribute to the project.
 
-You can use the same **2.1** method to run your plugin in an installed Logstash by editing its `Gemfile` and pointing the `:path` to your local plugin development directory or you can build the gem and install it using:
-
-- Build your plugin gem
-```sh
-gem build logstash-filter-awesome.gemspec
-```
-- Install the plugin from the Logstash home
-```sh
-bin/plugin install /your/local/plugin/logstash-filter-awesome.gem
-```
-- Start Logstash and proceed to test the plugin
-
-## Contributing
-
-All contributions are welcome: ideas, patches, documentation, bug reports, complaints, and even something you drew up on a napkin.
-
-Programming is not a required skill. Whatever you've seen about open source and maintainers or community members  saying "send patches or die" - you will not see that here.
-
-It is more important to the community that you are able to contribute.
-
-For more information about contributing, see the [CONTRIBUTING](https://github.com/elasticsearch/logstash/blob/master/CONTRIBUTING.md) file.
+Please also see [Analyze Diagnostics Data with ELK template](https://github.com/Azure/azure-quickstart-templates/tree/master/diagnostics-with-elk) for quick deployment of ELK to Azure.   
