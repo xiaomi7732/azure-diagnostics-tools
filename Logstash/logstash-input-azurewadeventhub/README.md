@@ -12,55 +12,55 @@ For more information, see Logstash reference [Working with plugins](https://www.
 
 ## Configuration
 ### Required Parameters
-*key*
+__*key*__
 
 The shared access key to the target event hub.
 
-*username*
+__*username*__
 
 The name of the shared access policy.
 
-*namespace*
+__*namespace*__
 
 Event Hub namespace.
 
-*eventhub*
+__*eventhub*__
 
 Event Hub name.
 
-*partitions*
+__*partitions*__
 
 Partition count of the target event hub.
 
 ### Optional Parameters
-*domain*
+__*domain*__
 
 Domain of the target Event Hub. Default value is "servicebus.windows.net".
 
-*port*
+__*port*__
 
 Port of the target Event Hub. Default value is 5671.
 
-*receive_credits*
+__*receive_credits*__
 
 The credit number to limit the number of messages to receive in a processing cycle. Default value is 1000.
 
-*consumer_group*
+__*consumer_group*__
 
 Name of the consumer group. Default value is "$default".
 
-*time_since_epoch_millis*
+__*time_since_epoch_millis*__
 
 Specifies the point of time after which the messages are received. Default value is the time when this plugin is initialized:
 ```ruby
 Time.now.utc.to_i * 1000
 ```
-*thread_wait_sec*
+__*thread_wait_sec*__
 
 Specifies the time (in seconds) to wait before another try if no message was received.
 
 ### Examples
-```json
+```
 input
 {
     azurewadeventhub
