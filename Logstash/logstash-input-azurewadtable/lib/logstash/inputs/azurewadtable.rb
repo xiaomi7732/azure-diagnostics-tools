@@ -93,7 +93,7 @@ class LogStash::Inputs::AzureWADTable < LogStash::Inputs::Base
         end
 
         output_queue << event
-      end while !stop? # each block
+      end # each block
       @idle_delay = 0
       @last_timestamp = result.last.properties["TIMESTAMP"].iso8601 unless @continuation_token
     else
