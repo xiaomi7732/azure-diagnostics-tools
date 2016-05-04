@@ -77,4 +77,4 @@ input
 ## More information
 The source code of this plugin is hosted in GitHub repo [Microsoft Azure Diagnostics with ELK](https://github.com/Azure/azure-diagnostics-tools). We welcome you to provide feedback and/or contribute to the project.
 
-Please also see [Analyze Diagnostics Data with ELK template](https://github.com/Azure/azure-quickstart-templates/tree/master/diagnostics-with-elk) for quick deployment of ELK to Azure.   
+Please also see [Analyze Diagnostics Data with Event Hub and ELK](https://github.com/Azure/azure-quickstart-templates/tree/master/diagnostics-eventhub-elk) for quick deployment of ELK to Azure.   
