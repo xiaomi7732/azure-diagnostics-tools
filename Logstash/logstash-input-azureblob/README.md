@@ -1,4 +1,4 @@
-# Logstash input plugin for Azure Service Bus Topics
+# Logstash input plugin for Azure Storage Blobs
 
 ## Summary
 This plugin reads and parses data from Azure Storage Blobs.
