@@ -9,7 +9,7 @@ require "securerandom"
 class LogStash::Inputs::Azureblob < LogStash::Inputs::Base
 
   config_name "azureblob"
-  milestone 0
+  milestone 1
   
   default :codec, "json_lines"
   
@@ -85,7 +85,7 @@ class LogStash::Inputs::Azureblob < LogStash::Inputs::Base
   
   public
   def run(output_queue)
-    while true
+    while !stop?
       process(output_queue)
     end # loop
   end # def run
