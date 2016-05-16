@@ -1,0 +1,11 @@
+{
+    "dnsNameForLoadBalancerIP": {
+        "value": "changeme"
+    },
+    "adminUsername": {
+        "value": "changeme"
+    },
+    "esUserName": {
+        "value": "changeme"
+    }    
+}
