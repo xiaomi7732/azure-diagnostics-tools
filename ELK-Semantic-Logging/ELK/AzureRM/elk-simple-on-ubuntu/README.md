@@ -3,12 +3,11 @@
 # Install ELK on a Ubuntu machine
 <a href="http://codepen.io/juliusl/pen/ZGJJQB" target="_blank">Configure a logstash configuration</a> - Use this to help populate the "encodedConfigString" parameter for the template.
 
-<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmspnp%2Fsemantic-logging%2Felk%2FELK%2FAzureRM%2Felk-simple-on-ubuntu%2Fazuredeploy.json" target="_blank">
+<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-diagnostics-tools%2Fmaster%2FELK-Semantic-Logging%2FELK%2FAzureRM%2Felk-simple-on-ubuntu%2Fazuredeploy.json" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
 This template deploys and installs elastic search, logstash, and kibana on a single Ubuntu virtual machine. This is meant as a sample and isn't recommended for production loads. 
-Uses elastic search install script from: https://github.com/Azure/azure-quickstart-templates/tree/master/elasticsearch.
 
 Below are the parameters that the template expects:
 
