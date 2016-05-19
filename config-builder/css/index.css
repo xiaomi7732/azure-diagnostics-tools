@@ -1,0 +1,107 @@
+.wb-json-list
+{
+    font-family: monospace, monospace;
+    display: block;
+    padding-left: 30px;
+}
+.wb-json-line
+{
+    display: block;
+    margin: 0px;
+    position: relative;
+    left: -30px;
+}
+.wb-json-line-excluded
+{
+    display: block;
+    margin: 0px;
+    position: relative;
+    left: -30px;
+    color: #c8c8c8;
+}
+.wb-json-line-content
+{
+    position: relative;
+    left: 30px;
+}
+.wb-addremove-btn
+{
+    height: 20px;
+    display: none;
+    vertical-align: top;
+    position: absolute;
+    left: 10px;
+}
+.wb-addelement-btn
+{
+    height: 20px;
+    display: none;
+    vertical-align: top;
+}
+.wb-json-field-string
+{
+    color: seagreen;
+    display: inline;
+}
+.wb-json-field-number
+{
+    color: blue;
+    display: inline;
+}
+.wb-json-field-input
+{
+    width: 400px;
+    height: 22px;
+    margin: 0px;
+    vertical-align: top;
+    padding: 0px;
+    display: none;
+}
+.wb-json-field-input-checkbox
+{
+    display: none;
+}
+.wb-json-line:hover
+{
+    background-color: #f8f8f8;
+}
+.wb-json-line:hover > .wb-addremove-btn
+{
+    display: inline;    
+}
+.wb-json-line-content:hover > .wb-addelement-btn
+{
+    display: inline;    
+}
+.wb-json-line-content:hover > .wb-json-field-input
+{
+    display: inline;
+}
+.wb-json-line-content:hover > .wb-json-field-input-checkbox
+{
+    display: inline;
+}
+.wb-json-line-content:hover > .wb-json-field-string
+{
+    display: none;    
+}
+.wb-json-line-content:hover > .wb-json-field-number
+{
+    display: none;    
+}
+.wb-json-line-excluded:hover
+{
+    background-color: #f8f8f8;
+}
+.wb-json-line-excluded:hover > .wb-addremove-btn
+{
+    display: inline;    
+}
+.wb-json-field-key
+{
+    color: chocolate;
+}
+.wb-panel-buttons
+{
+    float: right;
+}

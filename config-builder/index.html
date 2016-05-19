@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html ng-app="wadcfgBuilder">
+<head>
+    <title>Azure Diagnostics Config Builder</title>
+    <meta http-equiv="x-ua-compatible" content="IE=edge" />
+    <link rel="stylesheet" type="text/css" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="css/index.css" />
+    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular.js""></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>    
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>    
+    <script src="js/app.js"></script>
+    <script src="js/wadcfgConfigPrototype.js"></script>
+    <script src="js/ladcfgConfigPrototype.js"></script>
+    <script src="js/models.js"></script>    
+    <script src="js/openFileService.js"></script>
+    <script src="js/mainController.js"></script>
+    <script src="js/editorController.js"></script>
+</head>
+<body ng-controller="mainController">
+    <input type="file" class="hide" id="openFileInput" />
+
+    <!-- JSON tree recursive template -->
+    <script type="text/ng-template" id="jsonBlock">
+        <!-- JSON block definition if the object currently in scope is array -->
+        <ul class="wb-json-list" ng-repeat="(key, jsonObj) in jsonObj" ng-init="currObj = $parent.$parent.jsonObj;isInArray = (getType(currObj) == 'array')">
+
+            <div ng-if="jsonObj !== null">            
+                <!-- Object type -->
+                <div ng-if="getType(jsonObj) == 'object'">
+                    <li class="wb-json-line">
+                        <button class="btn btn-danger btn-xs wb-addremove-btn" ng-click="excludeItemClick(currObj, key, isInPublicConfig)">X</button>
+                        <span class="wb-json-line-content">
+                            <span class="wb-json-field-key" ng-if="!isInArray">"{{key}}"</span>
+                            <span ng-if="!isInArray"> : </span>
+                            <span>{</span>
+                        </span>
+                    </li>                
+                    <div ng-include="'jsonBlock'">
+                    </div>
+                    <li class="wb-json-line"><span class="wb-json-line-content">}<span ng-if="!$last">,</span></span></li>
+                </div>
+                
+                <!-- Array type -->
+                <div ng-if="getType(jsonObj) == 'array'">
+                    <li class="wb-json-line">
+                        <button class="btn btn-danger btn-xs wb-addremove-btn" ng-click="excludeItemClick(currObj, key, isInPublicConfig)">X</button>
+                        <span class="wb-json-line-content">
+                            <span class="wb-json-field-key" ng-if="!isInArray">"{{key}}"</span>
+                            <span ng-if="!isInArray"> : </span>
+                            <span>[</span>
+                            <button class="btn btn-info btn-xs wb-addelement-btn" ng-click="addArrayElementClick(currObj, key, isInPublicConfig)">+element</button>
+                        </span>
+                    </li>
+                    <div ng-include="'jsonBlock'">
+                    </div>
+                    <li class="wb-json-line"><span class="wb-json-line-content">]<span ng-if="!$last">,</span></span></li>
+                </div>
+                
+                <!-- String type -->
+                <div ng-if="getType(jsonObj) == 'string'">
+                    <li class="wb-json-line">
+                        <button class="btn btn-danger btn-xs wb-addremove-btn" ng-click="excludeItemClick(currObj, key, isInPublicConfig)">X</button>
+                        <span class="wb-json-line-content">
+                            <span class="wb-json-field-key" ng-if="!isInArray">"{{key}}"</span>
+                            <span ng-if="!isInArray"> : </span>
+                            <span class="wb-json-field-string">{{jsonObj | json}}</span><input type="text" class="wb-json-field-input" ng-model="jsonObj" ng-blur="currObj[key] = jsonObj"/><span ng-if="!$last">,</span>
+                        </span>
+                    </li>
+                </div>
+
+                <!-- Number type -->
+                <div ng-if="getType(jsonObj) == 'number'">
+                    <li class="wb-json-line">
+                        <button class="btn btn-danger btn-xs wb-addremove-btn" ng-click="excludeItemClick(currObj, key, isInPublicConfig)">X</button>
+                        <span class="wb-json-line-content">
+                            <span class="wb-json-field-key" ng-if="!isInArray">"{{key}}"</span>
+                            <span ng-if="!isInArray"> : </span>
+                            <span class="wb-json-field-number">{{jsonObj}}</span><input type="number" class="wb-json-field-input" ng-model="jsonObj" ng-blur="currObj[key] = jsonObj"/><span ng-if="!$last">,</span>
+                        </span>
+                    </li>
+                </div>
+
+                <!-- Boolean type -->
+                <div ng-if="getType(jsonObj) == 'boolean'">
+                    <li class="wb-json-line">
+                        <button class="btn btn-danger btn-xs wb-addremove-btn" ng-click="excludeItemClick(currObj, key, isInPublicConfig)">X</button>
+                        <span class="wb-json-line-content">
+                            <span class="wb-json-field-key" ng-if="!isInArray">"{{key}}"</span>
+                            <span ng-if="!isInArray"> : </span>
+                            <span class="wb-json-field-number">{{jsonObj}}</span><input type="checkbox" class="wb-json-field-input-checkbox" ng-model="jsonObj" ng-blur="currObj[key] = jsonObj"/><span ng-if="!$last">,</span>
+                        </span>
+                    </li>
+                </div>
+            </div>
+
+            <div ng-if="jsonObj === null">
+                <li class="wb-json-line-excluded">
+                    <button class="btn btn-success btn-xs wb-addremove-btn" ng-click="includeItemClick(currObj, key, isInPublicConfig)">+</button>
+                    <span class="wb-json-line-content">
+                        <span>"{{key}}" : null</span><span ng-if="!$last">,</span>
+                    </span>
+                </li>                
+            </div>
+        </ul>
+    </script>    
+
+    <!-- Public and private config JSON block -->
+    <script type="text/ng-template" id="publicConfigJsonBlock">
+        <div ng-include="'jsonBlock'" ng-init="jsonObj=model.publicConfig;isInPublicConfig=true"></div>
+    </script>
+
+    <script type="text/ng-template" id="privateConfigJsonBlock">
+        <div ng-include="'jsonBlock'" ng-init="jsonObj=model.privateConfig;isInPrivateConfig=true"></div>
+    </script>
+
+    <!-- NAV bar -->
+    <nav class="navbar navbar-default">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand dropdown-toggle" data-toggle="dropdown" href="#">{{activeCfgBuilder}} <span class="caret"></span></a>
+                <ul class="dropdown-menu">
+                    <li><a ng-click="activeCfgBuilder = 'WADCFG'">WADCFG</a></li>
+                    <li><a ng-click="activeCfgBuilder = 'LADCFG'">LADCFG</a></li>
+                </ul>
+            </div>
+            <ul class="nav navbar-nav" ng-repeat="(name, modelSpace) in configModelSpaces" ng-hide="activeCfgBuilder != name">
+                <li class="active"><a href="#{{name}}_builderPane" data-toggle="pill">BUILDER</a></li>
+                <li><a href="#{{name}}_jsonTextPane" data-toggle="pill" ng-click="exportJson()">JSON</a></li>
+                <li><a href="#{{name}}_xmlTextPane" data-toggle="pill" ng-click="exportXml()" ng-show="modelSpace.publicSpace.hasXmlTemplate()">XML</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main panel -->
+    <div class="container-fluid">
+        <div ng-repeat="(name, modelSpace) in configModelSpaces" ng-hide="activeCfgBuilder != name">
+            <div class="tab-content" ng-controller="editorController">
+                <div class="tab-pane fade in active" id="{{name}}_builderPane">                
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <a data-toggle="collapse" href="#{{name}}_publicConfigPanel">Public Config</a>
+                            <span class="wb-panel-buttons">
+                                <button type="button" class="btn btn-primary btn-xs" ng-click="newPublicConfig()">New</button>
+                                <button type="button" class="btn btn-primary btn-xs" ng-click="loadPublicConfig()">Load</button>
+                            </span>
+                        </div>
+                        <div class="panel-body panel-collapse in" id="{{name}}_publicConfigPanel">
+                            <li class="wb-json-line"><span class="wb-json-line-content">{</span></li>
+                            <div ng-include="'publicConfigJsonBlock'"></div>
+                            <li class="wb-json-line"><span class="wb-json-line-content">}</span></li>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <a data-toggle="collapse" href="#{{name}}_privateConfigPanel">Private Config</a>
+                            <span class="wb-panel-buttons">
+                                <button type="button" class="btn btn-primary btn-xs" ng-click="newPrivateConfig()">New</button>
+                                <button type="button" class="btn btn-primary btn-xs" ng-click="loadPrivateConfig()">Load</button>
+                            </span>
+                        </div>
+                        <div class="panel-body panel-collapse in" id="{{name}}_privateConfigPanel">
+                            <li class="wb-json-line"><span class="wb-json-line-content">{</span></li>
+                            <div ng-include="'privateConfigJsonBlock'"></div>
+                            <li class="wb-json-line"><span class="wb-json-line-content">}</span></li>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="{{name}}_jsonTextPane">
+                    <pre>{{model.publicConfigJson}}</pre>
+                    <pre>{{model.privateConfigJson}}</pre>
+                </div>
+                <div class="tab-pane fade" id="{{name}}_xmlTextPane">
+                    <pre>{{model.publicConfigXml}}</pre>
+                    <pre>{{model.privateConfigXml}}</pre>
+                </div>
+            </div>
+        </div>
+    </div>    
+
+</body>
+</html>   
