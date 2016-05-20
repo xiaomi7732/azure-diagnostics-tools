@@ -128,9 +128,7 @@ private static async Task EnsureIndexExists(string currentIndexName, ElasticClie
 
     if (!createIndexResult.IsValid)
     {
-        if (createIndexResult.ServerError != null &&
-            createIndexResult.ServerError.Error != null &&
-            string.Equals(createIndexResult.ServerError.Error.Type, "IndexAlreadyExistsException", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(createIndexResult.ServerError?.Error?.Type, "IndexAlreadyExistsException", StringComparison.OrdinalIgnoreCase))
         {
             // This is fine, someone just beat us to create a new index. 
             return;
