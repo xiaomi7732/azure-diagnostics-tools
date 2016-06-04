@@ -1,0 +1,35 @@
+# Logstash output plugin for Application Insights 
+
+## Summary
+
+
+## Installation
+You can install this plugin using the Logstash "plugin" or "logstash-plugin" (for newer versions of Logstash) command:
+```sh
+logstash-plugin install logstash-output-applicationinsights
+```
+For more information, see Logstash reference [Working with plugins](https://www.elastic.co/guide/en/logstash/current/working-with-plugins.html).
+
+## Configuration
+### Required Parameters
+__*ikey*__
+
+The Application Insights Instrumentation key.
+
+### Optional Parameters
+
+### Examples
+```
+output
+{
+    applicationinsights
+    {
+        ikey => "00000000-0000-0000-0000-000000000000"
+    }
+}
+```
+
+## More information
+The source code of this plugin is hosted in GitHub repo [Microsoft Azure Diagnostics with ELK](https://github.com/Azure/azure-diagnostics-tools). We welcome you to provide feedback and/or contribute to the project.
+
+Please also see [Analyze Diagnostics Data with ELK template](https://github.com/Azure/azure-quickstart-templates/tree/master/diagnostics-with-elk) for quick deployment of ELK to Azure.   
