@@ -17,6 +17,9 @@ __*ikey*__
 The Application Insights Instrumentation key.
 
 ### Optional Parameters
+__*dev_mode*__
+
+If this is set to True, the plugin sends telemetry to Application Insights immediately; otherwise the plugin respects production sending policies defined by other properties.
 
 ### Examples
 ```
@@ -25,6 +28,7 @@ output
     applicationinsights
     {
         ikey => "00000000-0000-0000-0000-000000000000"
+        dev_mode => true
     }
 }
 ```
