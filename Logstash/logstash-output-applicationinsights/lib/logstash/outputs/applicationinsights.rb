@@ -27,21 +27,20 @@ class LogStash::Outputs::ApplicationInsights < LogStash::Outputs::Base
         end #unless
         
         ai_properties = event.to_hash.fetch(@ai_properties_field, nil)
-
         if !@ai_message_field.nil? && ai_message.nil?
           @logger.warn("#{@ai_message_field} specified in ai_message_field not found in event data. AI Message will be null.")
         end # if
         
+        ai_properties = event.to_hash.fetch(@ai_properties_field, nil)
         if !@ai_properties_field.nil? && ai_properties.nil?
           @logger.warn("#{@ai_properties_field} specified in ai_properties_field not found in event data. Will use all fields in event as AI properties.")
-          ai_properties = event.to_hash
         end # if
         
         unless @ai_message_field.nil? || ai_message.nil?
           event.remove(@ai_message_field) # Removes the duplicated AI Message field.
         end #unless
 
-        @client.track_trace(ai_message, Channel::Contracts::SeverityLevel::INFORMATION, { :properties => event.to_hash.fetch(@ai_properties_field, event.to_hash) })
+        @client.track_trace(ai_message, Channel::Contracts::SeverityLevel::INFORMATION, { :properties => ai_properties || event.to_hash })
 
         if dev_mode
           @client.flush
