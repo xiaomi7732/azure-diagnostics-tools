@@ -17,6 +17,14 @@ __*ikey*__
 The Application Insights Instrumentation key.
 
 ### Optional Parameters
+__*ai_message_field*__
+
+Specifies the name of the field of the event to be used as the Message field of the AI trace. If not specified, Message in AI will be "Null".
+
+__*ai_properties_field*__
+
+Specifies the name of the field of the event to be used as the Properties field of the AI trace. If not specified, all fields in event will be used.
+
 __*dev_mode*__
 
 If this is set to True, the plugin sends telemetry to Application Insights immediately; otherwise the plugin respects production sending policies defined by other properties.
