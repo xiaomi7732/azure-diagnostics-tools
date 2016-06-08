@@ -37,6 +37,8 @@ output
     {
         ikey => "00000000-0000-0000-0000-000000000000"
         dev_mode => true
+        ai_message_field => "EventMessage"
+        ai_properties_field => "EventProperties"
     }
 }
 ```
