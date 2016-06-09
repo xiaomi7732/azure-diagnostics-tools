@@ -19,11 +19,21 @@ The Application Insights Instrumentation key.
 ### Optional Parameters
 __*ai_message_field*__
 
-Specifies the name of the field of the event to be used as the Message field of the AI trace. If not specified, Message in AI will be "Null".
+Specifies the name of the event field to be used as the Message field of the Application Insights trace. If not specified, Message in Application Insights will be "Null".
 
 __*ai_properties_field*__
 
-Specifies the name of the field of the event to be used as the Properties field of the AI trace. If not specified, all fields in event will be used.
+Specifies the name of the event field to be used as the Properties field of the Application Insights trace. The type of the field needs to be Hash. If not specified, all fields in event will be used.
+
+__*ai_severity_level_field*__
+
+Specifies the name of the event field to be used as the Severity level of the Application Insights trace. If not specified, all traces will be "Informational".
+
+__*ai_severity_level_mapping*__
+
+Specifies how to map the values read from *ai_severity_level_field* to Application Insights severity level. This is a hash containing the possible values from event as keys and corresponding Application Insights Severity Level constants as values.
+
+See example below for how to map [Azure diagnostics log level values](https://msdn.microsoft.com/en-us/library/azure/microsoft.windowsazure.diagnostics.loglevel.aspx) to [Application Insights severity values](https://github.com/Microsoft/ApplicationInsights-Ruby/blob/master/lib/application_insights/channel/contracts/severity_level.rb).
 
 __*dev_mode*__
 
@@ -39,6 +49,8 @@ output
         dev_mode => true
         ai_message_field => "EventMessage"
         ai_properties_field => "EventProperties"
+        ai_severity_level_field => "level"
+        ai_severity_level_mapping => { 5 => 0 4 => 1 3 => 2 2 => 3 1 => 4 0 => 4 }
     }
 }
 ```
