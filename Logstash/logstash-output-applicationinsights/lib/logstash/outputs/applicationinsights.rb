@@ -1,8 +1,10 @@
 # encoding: utf-8
 require "logstash/outputs/base"
 require "logstash/namespace"
-
 require "application_insights"
+
+include ApplicationInsights
+include ApplicationInsights::Channel
 
 class LogStash::Outputs::ApplicationInsights < LogStash::Outputs::Base
   config_name "applicationinsights"
@@ -41,7 +43,10 @@ class LogStash::Outputs::ApplicationInsights < LogStash::Outputs::Base
   end # def close
 
   def create_client
-    @client = TelemetryClient.new(@ikey)
+    telemetry_context = TelemetryContext.new
+    async_queue = AsynchronousQueue.new(AsynchronousSender.new)
+    telemetry_channel = TelemetryChannel.new(telemetry_context, async_queue)
+    @client = TelemetryClient.new(@ikey, telemetry_channel)
   end # def create_client
   
   def get_ai_message(event)
