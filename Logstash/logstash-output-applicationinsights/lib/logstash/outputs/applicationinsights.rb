@@ -10,12 +10,15 @@ class LogStash::Outputs::ApplicationInsights < LogStash::Outputs::Base
   config_name "applicationinsights"
 
   config :ikey, :validate => :string, :required => true
+  config :ai_type, :validate => :string, :required => true
   config :dev_mode, :validate => :boolean, :required => false, :default => false
   config :ai_message_field, :validate => :string, :required => false, :default => nil
   config :ai_properties_field, :validate => :string, :required => false, :default => nil
   config :ai_severity_level_field, :validate => :string, :required => false, :default => nil
   config :ai_severity_level_mapping, :validate => :hash, :required => false, :default => nil
-
+  config :ai_metrics_names, :validate => :array, :required => false, :default => nil
+  config :ai_event_name, :validate => :string, :required => false, :default => nil
+  
   public
   def register
      create_client
@@ -25,11 +28,26 @@ class LogStash::Outputs::ApplicationInsights < LogStash::Outputs::Base
   def multi_receive(events)
     events.each do |event|
       begin
-        ai_message = get_ai_message(event)
         ai_properties = get_ai_properties(event)
-        ai_severity = get_ai_severity(event)
+        if @ai_type == "trace"
+          ai_message = get_field(event, @ai_message_field)
+          ai_severity = get_ai_severity(event)
+          @client.track_trace(ai_message, ai_severity, { :properties => ai_properties })
+        elsif @ai_type == "metric"
+          if !@ai_metrics_names.nil? && @ai_metrics_names.any?
+            @ai_metrics_names.each do |metric_name|
+              metric_value = get_field(event, metric_name)
+              if metric_value.nil?
+                @logger.warn("#{@metric_name} specified in ai_metrics_names not found in event data.")
+              else
+                @client.track_metric(metric_name, metric_value.to_f, { :properties => ai_properties })
+              end  # if
+            end # do
+          end # if ai_metric_fields
+        elsif @ai_type == "event"
+          @client.track_event(@ai_event_name, { :properties => ai_properties }) if !@ai_event_name.nil?
+        end # if ai_type
 
-        @client.track_trace(ai_message, ai_severity, { :properties => ai_properties })
         @client.flush if @dev_mode
 
       rescue => e
@@ -49,13 +67,13 @@ class LogStash::Outputs::ApplicationInsights < LogStash::Outputs::Base
     @client = TelemetryClient.new(@ikey, telemetry_channel)
   end # def create_client
   
-  def get_ai_message(event)
-    return nil if @ai_message_field.nil?
+  def get_field(event, field_name)
+    return nil if field_name.nil?
     
-    ai_message = event[@ai_message_field] # Extracts specified field value as the AI Message.
-    @logger.warn("#{@ai_message_field} specified in ai_message_field not found in event data. AI Message will be null.") if ai_message.nil?
-    event.remove(@ai_message_field) unless ai_message.nil?  # Removes the duplicated AI Message field.
-    ai_message
+    field = event[field_name] # Extracts specified field value as the AI Message.
+    @logger.warn("#{field_name} not found in event data.") if field.nil?
+    event.remove(field_name) unless field.nil?  # Removes the duplicated AI field.
+    field
   end # def get_ai_message
   
   def get_ai_properties(event)
