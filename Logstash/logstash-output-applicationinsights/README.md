@@ -16,6 +16,10 @@ __*ikey*__
 
 The Application Insights Instrumentation key.
 
+__*ai_type*__
+
+The type of Application Insights event: "trace", "metric" and "event" are supported
+
 ### Optional Parameters
 __*ai_message_field*__
 
@@ -34,6 +38,14 @@ __*ai_severity_level_mapping*__
 Specifies how to map the values read from *ai_severity_level_field* to Application Insights severity level. This is a hash containing the possible values from event as keys and corresponding Application Insights Severity Level constants as values.
 
 See example below for how to map [Azure diagnostics log level values](https://msdn.microsoft.com/en-us/library/azure/microsoft.windowsazure.diagnostics.loglevel.aspx) to [Application Insights severity values](https://github.com/Microsoft/ApplicationInsights-Ruby/blob/master/lib/application_insights/channel/contracts/severity_level.rb).
+
+__*ai_metrics_names*__
+
+Specifies the names of the event fields to be used as metrics name; the value of each field specified will be reported as metric value. If not specified, no metric will be reported. 
+
+__*ai_event_name*__
+
+Specifies the name of the event to be reported; If not specified, no event will be reported. 
 
 __*dev_mode*__
 
