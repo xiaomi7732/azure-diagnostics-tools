@@ -24,6 +24,11 @@ __*container*__
 
 The blob container name.
 
+### Optional Parameters
+__*endpoint*__
+
+Specifies the endpoint of Azure Service Management. The default value is "core.windows.net". 
+
 ### Examples
 ```
 input
