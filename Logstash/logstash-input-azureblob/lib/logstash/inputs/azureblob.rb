@@ -18,6 +18,7 @@ class LogStash::Inputs::Azureblob < LogStash::Inputs::Base
   
   config :container, :validate => :string
   config :sleep_time, :validate => :number, :default => 10
+  config :endpoint, :validate => :string, :default => "core.windows.net"
   
   def initialize(*args)
     super(*args)
@@ -28,6 +29,7 @@ class LogStash::Inputs::Azureblob < LogStash::Inputs::Base
     Azure.configure do |config|
       config.storage_account_name = @storage_account_name
       config.storage_access_key = @storage_access_key
+      config.storage_blob_host = "https://#{@storage_account_name}.blob.#{@endpoint}"
     end
     @azure_blob = Azure::Blob::BlobService.new
   end # def register
