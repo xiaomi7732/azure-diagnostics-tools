@@ -77,6 +77,7 @@ class LogStash::Inputs::Azureblob < LogStash::Inputs::Base
     return if !blob_name
     blob, content = @azure_blob.get_blob(@container, blob_name)
     @codec.decode(content) do |event|
+      decorate(event)
       output_queue << event
     end
   rescue LogStash::ShutdownSignal => e
