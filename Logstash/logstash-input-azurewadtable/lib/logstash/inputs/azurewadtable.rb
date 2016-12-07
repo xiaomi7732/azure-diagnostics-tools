@@ -9,7 +9,7 @@ class LogStash::Inputs::AzureWADTable < LogStash::Inputs::Base
 
   config_name "azurewadtable"
   milestone 1
-  
+
   config :account_name, :validate => :string
   config :access_key, :validate => :string
   config :table_name, :validate => :string
@@ -41,7 +41,7 @@ class LogStash::Inputs::AzureWADTable < LogStash::Inputs::Base
     @idle_delay = @idle_delay_seconds
     @continuation_token = nil
   end # register
-  
+
   public
   def run(output_queue)
     while !stop?
@@ -51,10 +51,10 @@ class LogStash::Inputs::AzureWADTable < LogStash::Inputs::Base
       sleep @idle_delay
     end # while
   end # run
- 
+
   public
   def teardown
-  end  
+  end
 
   def build_latent_query
     @logger.debug("from #{@last_timestamp} to #{@until_timestamp}")
@@ -90,16 +90,17 @@ class LogStash::Inputs::AzureWADTable < LogStash::Inputs::Base
     @continuation_token = result.continuation_token
 
     if result and result.length > 0
+      @logger.debug("#{result.length} results found.")
       last_good_timestamp = nil
       result.each do |entity|
         event = LogStash::Event.new(entity.properties)
-        event["type"] = @table_name
+        event.set("type", @table_name)
 
         # Help pretty print etw files
-        if (@etw_pretty_print && !event["EventMessage"].nil? && !event["Message"].nil?)
+        if (@etw_pretty_print && !event.get("EventMessage").nil? && !event.get("Message").nil?)
           @logger.debug("event: " + event.to_s)
-          eventMessage = event["EventMessage"].to_s
-          message = event["Message"].to_s
+          eventMessage = event.get("EventMessage").to_s
+          message = event.get("Message").to_s
           @logger.debug("EventMessage: " + eventMessage)
           @logger.debug("Message: " + message)
           if (eventMessage.include? "%")
@@ -107,35 +108,41 @@ class LogStash::Inputs::AzureWADTable < LogStash::Inputs::Base
             toReplace = eventMessage.scan(/%\d+/)
             payload = message.scan(/(?<!\\S)([a-zA-Z]+)=(\"[^\"]*\")(?!\\S)/)
             # Split up the format string to seperate all of the numbers
-            toReplace.each do |key| 
+            toReplace.each do |key|
               @logger.debug("Replacing key: " + key.to_s)
               index = key.scan(/\d+/).join.to_i
               newValue = payload[index - 1][1]
               @logger.debug("New Value: " + newValue)
               eventMessage[key] = newValue
             end # do block
-            event["EventMessage"] = eventMessage
-            @logger.debug("pretty print end. result: " + event["EventMessage"].to_s)
+            event.set("EventMessage", eventMessage)
+            @logger.debug("pretty print end. result: " + event.get("EventMessage").to_s)
           end
         end
         decorate(event)
-        if event['PreciseTimeStamp'].is_a?(Time)
-          event['PreciseTimeStamp']=LogStash::Timestamp.new(event['PreciseTimeStamp'])
+        if event.get('PreciseTimeStamp').is_a?(Time)
+          event.set('PreciseTimeStamp', LogStash::Timestamp.new(event.get('PreciseTimeStamp')))
+        end
+        theTIMESTAMP = event.get('TIMESTAMP')
+        if theTIMESTAMP.is_a?(LogStash::Timestamp)
+          last_good_timestamp = theTIMESTAMP.to_iso8601
+        elsif theTIMESTAMP.is_a?(Time)
+          last_good_timestamp = theTIMESTAMP.iso8601
+          event.set('TIMESTAMP', LogStash::Timestamp.new(theTIMESTAMP))
+        else
+          @logger.warn("Found result with invalid TIMESTAMP. " + event.to_hash.to_s)
         end
         output_queue << event
-        if (!event["TIMESTAMP"].nil?)
-          last_good_timestamp = event["TIMESTAMP"]
-        end
       end # each block
       @idle_delay = 0
       if (!last_good_timestamp.nil?)
-        @last_timestamp = last_good_timestamp.iso8601 unless @continuation_token
+        @last_timestamp = last_good_timestamp unless @continuation_token
       end
     else
       @logger.debug("No new results found.")
       @idle_delay = @idle_delay_seconds
     end # if block
-    
+
   rescue => e
     @logger.error("Oh My, An error occurred.", :exception => e)
     raise
@@ -157,11 +164,11 @@ class LogStash::Inputs::AzureWADTable < LogStash::Inputs::Base
     ticks = to_ticks(collection_time)
     "0#{ticks}"
   end # partitionkey_from_datetime
-  
+
   # Convert time to ticks
   def to_ticks(time_to_convert)
     @logger.debug("Converting time to ticks")
-    time_to_convert.to_i * 10000000 - TICKS_SINCE_EPOCH 
+    time_to_convert.to_i * 10000000 - TICKS_SINCE_EPOCH
   end # to_ticks
 
 end # LogStash::Inputs::AzureWADTable
