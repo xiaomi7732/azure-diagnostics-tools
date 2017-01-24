@@ -36,8 +36,8 @@ class LogStash::Inputs::Azureblob < LogStash::Inputs::Base
   
   def list_blob_names
     blob_names = Set.new []
+    continuation_token = NIL
     loop do
-      continuation_token = NIL
       entries = @azure_blob.list_blobs(@container, { :timeout => 10, :marker => continuation_token})
       entries.each do |entry|
         blob_names << entry.name
