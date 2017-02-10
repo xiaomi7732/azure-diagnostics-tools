@@ -19,6 +19,7 @@ class LogStash::Inputs::Azureblob < LogStash::Inputs::Base
   config :container, :validate => :string
   config :sleep_time, :validate => :number, :default => 10
   config :endpoint, :validate => :string, :default => "core.windows.net"
+  config :backupmode, :validate => :boolean, :default => false 
   
   def initialize(*args)
     super(*args)
@@ -71,11 +72,31 @@ class LogStash::Inputs::Azureblob < LogStash::Inputs::Base
     return NIL
   end # def lock_blob
   
+  def archive_blob(blob_names)
+    real_blob_names = blob_names.select { |name| !name.end_with?(".bak") }
+    real_blob_names.each do |blob_name|
+      new_blob_name = "#{blob_name}-#{Time.now.to_f}.bak"
+      @azure_blob.acquire_lease(@container, blob_name,{:duration=>60, :timeout=>10, :proposed_lease_id=>SecureRandom.uuid})
+      @azure_blob.copy_blob(@container, new_blob_name, @container, blob_name)  
+      @azure_blob.delete_blob(@container, blob_name)
+      return new_blob_name
+    end
+    return NIL
+  end # def lock_blob
+ 
   def process(output_queue)
     blob_names = list_blob_names
-    blob_name = lock_blob(blob_names)
+    
+    if @backupmode
+      blob_name = archive_blob(blob_names)
+    else
+      blob_name = lock_blob(blob_names)
+    end
+
     return if !blob_name
     blob, content = @azure_blob.get_blob(@container, blob_name)
+    
+
     @codec.decode(content) do |event|
       decorate(event)
       output_queue << event
