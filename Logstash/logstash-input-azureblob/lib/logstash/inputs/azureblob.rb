@@ -77,6 +77,9 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   # When set to 'start_over', it will read all log files from begining.
   config :registry_create_policy, :validate => :string, :default => 'resume'
 
+  # Constant of max integer
+  MAX = 2 ** ([42].pack('i').size * 16 -2 ) -1
+
   public
   def register
     # this is the reader # for this specific instance.
@@ -161,7 +164,6 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   # Raise generation for blob in registry
   def raise_gen(registry_hash, file_path)
     begin
-      MAX = 2 ** ([42].pack('i').size * 16 -2 ) -1
       target_item = registry_hash[file_path]
       begin
         target_item.gen += 1
