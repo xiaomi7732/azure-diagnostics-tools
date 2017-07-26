@@ -236,7 +236,12 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
       picked_blob = nil
       candidate_blobs.each { |candidate_blob|
         registry_item = registry_hash[candidate_blob.name]
-        registry_item = LogStash::Inputs::RegistryItem.new(candidate_blob.name, candidate_blob.properties[:etag], nil, 0, 0) if registry_item.nil?
+
+        # Appending items that doesn't exist in the hash table
+        if registry_item.nil?
+          registry_item = LogStash::Inputs::RegistryItem.new(candidate_blob.name, candidate_blob.properties[:etag], nil, 0, 0)
+          registry_hash[candidate_blob.name] = registry_item
+        end # if
         
         if ((registry_item.offset < candidate_blob.properties[:content_length]) && (registry_item.reader.nil? || registry_item.reader == @reader))
           picked_blobs << candidate_blob
