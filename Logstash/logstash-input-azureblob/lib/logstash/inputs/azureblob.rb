@@ -71,6 +71,12 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   # The default, `30`, means trigger a reading for the log every 30 seconds.
   config :interval, :validate => :number, :default => 30
 
+  # Set the registry create mode
+  #
+  # The default, 'resume', means when the registry is initially created, it assumes all logs has been handled.
+  # When set to 'start_over', it will read all log files from begining.
+  config :registry_create_policy, :validate => :string, :default => 'resume'
+
   public
   def register
     # this is the reader # for this specific instance.
@@ -131,7 +137,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   def deserialize_registry_hash (json_string)
     result = Hash.new
     temp_hash = JSON.parse(json_string)
-    temp_hash.values.each {
+    temp_hash.values.each { |kvp|
       result[kvp['file_path']] = LogStash::Inputs::RegistryItem.new(kvp['file_path'], kvp['etag'], kvp['reader'], kvp['offset'], kvp['gen'])
     }
     return result
@@ -296,7 +302,9 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
     registry_hash = Hash.new
 
     blob_items.each do |blob_item|
-      registry_item = LogStash::Inputs::RegistryItem.new(blob_item.name, blob_item.properties[:etag], nil)
+        initial_offset = 0
+        initial_offset = blob_item.properties[:content_length] if @registry_create_policy == 'resume'
+        registry_item = LogStash::Inputs::RegistryItem.new(blob_item.name, blob_item.properties[:etag], nil, initial_offset, 0)
       registry_hash[blob_item.name] = registry_item
     end # each
     save_registry(registry_hash)
