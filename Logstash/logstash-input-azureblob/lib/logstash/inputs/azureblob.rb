@@ -161,8 +161,16 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   # Raise generation for blob in registry
   def raise_gen(registry_hash, file_path)
     begin
+      MAX = 2 ** ([42].pack('i').size * 16 -2 ) -1
       target_item = registry_hash[file_path]
-      target_item.gen += 1
+      begin
+        target_item.gen += 1
+        # Protect gen from overflow.
+        target_item.gen = target_item.gen / 2 if target_item.gen == MAX
+      rescue StandardError => e
+        @logger.error("Fail to get the next generation for target item #{target_item}.", :exception => e)
+        target_item.gen = 0
+      end
 
       min_gen_item = registry_hash.values.min_by { |x| x.gen }
       while min_gen_item.gen > 0
