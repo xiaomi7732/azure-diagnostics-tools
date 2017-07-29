@@ -27,7 +27,34 @@ The blob container name.
 ### Optional Parameters
 __*endpoint*__
 
-Specifies the endpoint of Azure Service Management. The default value is "core.windows.net". 
+Specifies the endpoint of Azure Service Management. The default value is `core.windows.net`. 
+
+__*registry_path*__
+
+Specifies the file path for the registry file to record offsets and coordinate between multiple clients. The default value is `data/registry`.
+
+Overwrite this value when there happen to be a file at the path of `data/registry` in the azure blob container.
+
+__*interval*__
+
+Set how many seconds to idle before checking for new logs. The default, `30`, means idle for `30` seconds.
+
+__*registry_create_policy*__
+
+Specifies the way to initially set offset for existing blob files.
+
+This option only applies for registry creation. 
+
+Valid values include:
+
+  - resume
+  - start_over
+
+The default, `resume`, means when the registry is initially created, it assumes all blob has been consumed and it will start to pick up any new content in the blobs.
+
+When set to `start_over`, it assumes none of the blob is consumed and it will read all blob files from begining.
+
+Offsets will be picked up from registry file whenever it exists.
 
 ### Examples
 ```
