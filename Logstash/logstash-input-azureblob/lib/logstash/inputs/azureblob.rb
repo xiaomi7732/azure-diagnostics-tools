@@ -66,15 +66,15 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   # The default, `data/registry`, is used to coordinate readings for various instances of the clients.
   config :registry_path, :validate => :string, :default => 'data/registry'
   
-  # Set how frequently messages should be sent.
+  # Set how many seconds to keep idle before checking for new logs.
   #
-  # The default, `30`, means trigger a reading for the log every 30 seconds.
+  # The default, `30`, means trigger a reading for the log every 30 seconds after entering idle.
   config :interval, :validate => :number, :default => 30
 
   # Set the registry create mode
   #
-  # The default, 'resume', means when the registry is initially created, it assumes all logs has been handled.
-  # When set to 'start_over', it will read all log files from begining.
+  # The default, `resume`, means when the registry is initially created, it assumes all logs has been handled.
+  # When set to `start_over`, it will read all log files from begining.
   config :registry_create_policy, :validate => :string, :default => 'resume'
 
   # Constant of max integer
