@@ -16,9 +16,13 @@ __*namespace*__
 
 The Service Bus namespace.
 
+__*access_key_name*__
+
+The SAS policy name to the Service Bus resource.
+
 __*access_key*__
 
-The access key to the Service Bus resource.
+The SAS policy key to the Service Bus resource.
 
 __*subscription*__
 
@@ -40,6 +44,7 @@ input
     azuretopic
     {
         namespace => "mysbns"
+        access_key_name => "mySASkeyname"
         access_key => "VGhpcyBpcyBhIGZha2Uga2V5Lg=="
         subscription => "mytopicsubscription"
         topic => "mytopic"
