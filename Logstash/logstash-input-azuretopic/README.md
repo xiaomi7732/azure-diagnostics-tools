@@ -16,9 +16,13 @@ __*namespace*__
 
 The Service Bus namespace.
 
+__*access_key_name*__
+
+Optional: The SAS policy name to the Service Bus resource. If undefined, plugin will assume ACS is used.
+
 __*access_key*__
 
-The access key to the Service Bus resource.
+The access key to the Service Bus resource. Can be SAS policy or ACS key.
 
 __*subscription*__
 
@@ -34,6 +38,7 @@ __*deliverycount*__
 Specifies the number of times to try (and retry) to process a message before the message shall be deleted. The default value is 10.
 
 ### Examples
+Using ACS:
 ```
 input
 {
@@ -46,6 +51,21 @@ input
     }
 }
 ```
+Using SAS Policy:
+```
+input
+{
+    azuretopic
+    {
+        namespace => "mysbns"
+        access_key_name => "mySASkeyname"
+        access_key => "VGhpcyBpcyBhIGZha2Uga2V5Lg=="
+        subscription => "mytopicsubscription"
+        topic => "mytopic"
+    }
+}
+```
+
 
 ## More information
 The source code of this plugin is hosted in GitHub repo [Microsoft Azure Diagnostics with ELK](https://github.com/Azure/azure-diagnostics-tools). We welcome you to provide feedback and/or contribute to the project.
