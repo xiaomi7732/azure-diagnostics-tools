@@ -48,7 +48,6 @@ class LogStash::Inputs::Azuretopic < LogStash::Inputs::Base
     if message
       codec.decode(message.body) do |event|
         decorate(event)
-        event.set("type", @topic)
         output_queue << event
       end # codec.decode
       @azure_service_bus.delete_subscription_message(message)
