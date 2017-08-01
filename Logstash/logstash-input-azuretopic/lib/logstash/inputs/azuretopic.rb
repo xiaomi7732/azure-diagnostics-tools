@@ -14,7 +14,7 @@ class LogStash::Inputs::Azuretopic < LogStash::Inputs::Base
   default :codec, "json"
 
   config :namespace, :validate => :string
-  config :access_key_name, :validate => :string
+  config :access_key_name, :validate => :string, :required => false
   config :access_key, :validate => :string
   config :subscription, :validate => :string
   config :topic, :validate => :string
@@ -28,13 +28,19 @@ class LogStash::Inputs::Azuretopic < LogStash::Inputs::Base
   def register
     Azure.configure do |config|
       config.sb_namespace = @namespace
+      config.sb_access_key = @access_key
       config.sb_sas_key_name = @access_key_name
       config.sb_sas_key = @access_key
     end
-    signer = Azure::ServiceBus::Auth::SharedAccessSigner.new
-    sb_host = "https://#{Azure.sb_namespace}.servicebus.windows.net"
-
-    @azure_service_bus = Azure::ServiceBus::ServiceBusService.new(sb_host, { signer: signer})
+    if access_key_name 
+        # SAS key used 
+        signer = Azure::ServiceBus::Auth::SharedAccessSigner.new
+        sb_host = "https://#{Azure.sb_namespace}.servicebus.windows.net"
+        @azure_service_bus = Azure::ServiceBus::ServiceBusService.new(sb_host, { signer: signer})
+    else
+        # ACS key 
+        @azure_service_bus = Azure::ServiceBus::ServiceBusService.new
+    end
   end # def register
 
   def process(output_queue)
