@@ -16,6 +16,10 @@ __*namespace*__
 
 The Service Bus namespace.
 
+__*access_key_name*__
+
+Optional: The SAS policy name to the Service Bus resource. If undefined, plugin will assume ACS is used.
+
 __*access_key*__
 
 The access key to the Service Bus resource.
@@ -39,15 +43,16 @@ Specifies the number of threads to use to read the messages. The default value i
 
 __*thread_sleep_time*__
 
-Specifies the number of seconds each thread should sleep before starting another loop of processing. The default value is 1/50.
+Specifies the number of seconds each thread should sleep before starting another loop of processing when topic is empty. The default value is 1/50.
 
 ### Examples
 ```
 input
 {
-    azuretopic
+    azuretopicthreadable
     {
         namespace => "mysbns"
+        access_key_name => "mySASkeyname"
         access_key => "VGhpcyBpcyBhIGZha2Uga2V5Lg=="
         subscription => "mytopicsubscription"
         topic => "mytopic"
