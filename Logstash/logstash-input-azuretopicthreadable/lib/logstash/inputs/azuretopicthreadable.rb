@@ -59,8 +59,7 @@ class LogStash::Inputs::Azuretopicthreadable < LogStash::Inputs::Base
           output_queue << event
           # delete the message after reading it
           azure_service_bus.delete_subscription_message(message)
-        end
-        if !message
+        else
           Stud.stoppable_sleep(@thread_sleep_time) { stop? } #topic is probably empty. sleep. 
         end
       end
@@ -71,7 +70,7 @@ class LogStash::Inputs::Azuretopicthreadable < LogStash::Inputs::Base
         if message and message.delivery_count > @deliverycount
           azure_service_bus.delete_subscription_message(message)
         end
-		Stud.stoppable_sleep(@thread_sleep_time) { stop? }
+        Stud.stoppable_sleep(@thread_sleep_time) { stop? }
       end
     end
   end # def process
