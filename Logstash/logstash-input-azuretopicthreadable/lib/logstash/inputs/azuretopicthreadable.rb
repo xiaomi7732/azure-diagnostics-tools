@@ -1,7 +1,6 @@
 ﻿# encoding: utf-8
 require "logstash/inputs/base"
 require "logstash/namespace"
-
 require "thread"
 require "azure"
 
@@ -62,7 +61,7 @@ class LogStash::Inputs::Azuretopicthreadable < LogStash::Inputs::Base
           azure_service_bus.delete_subscription_message(message)
         end
         if !message
-          sleep(@thread_sleep_time) #topic is probably empty. sleep. 
+          Stud.stoppable_sleep(@thread_sleep_time) { stop? } #topic is probably empty. sleep. 
         end
       end
       rescue LogStash::ShutdownSignal => e
@@ -72,6 +71,7 @@ class LogStash::Inputs::Azuretopicthreadable < LogStash::Inputs::Base
         if message and message.delivery_count > @deliverycount
           azure_service_bus.delete_subscription_message(message)
         end
+		Stud.stoppable_sleep(@thread_sleep_time) { stop? }
       end
     end
   end # def process
