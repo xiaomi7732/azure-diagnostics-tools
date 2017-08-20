@@ -78,10 +78,13 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   config :registry_create_policy, :validate => :string, :default => 'resume'
 
   # Set the header of the file that does not repeate over records. Usually, these are json opening tags.
-  config :file_head_bytes, :validate => number, :default => 0
+  config :file_head_bytes, :validate => :number, :default => 0
 
   # Set the tail of the file that does not repeate over records. Usually, these are json closing tags.
-  config :file_tail_bytes, :validate => number, :default => 0
+  config :file_tail_bytes, :validate => :number, :default => 0
+
+  # Set the regular expression to process content before pushing the event.
+  config :record_preprocess_reg_exp, :validate => :string
 
   # Constant of max integer
   MAX = 2 ** ([42].pack('i').size * 16 -2 ) -1
@@ -137,8 +140,13 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
 
           blob, content = @azure_blob.get_blob(@container, blob_name, {:start_range => start_index} )
 
+          if(!@record_preprocess_reg_exp.nil?)
+            reg_exp = Regexp.new @record_preprocess_reg_exp
+            content = content.sub(reg_exp, '')
+          end
+
           # Putting header and content and tail together before pushing into event queue
-          content = "#{header}{content}" unless header.nil? || header.length == 0
+          content = "#{header}#{content}" unless header.nil? || header.length == 0
                               
           @codec.decode(content) do |event|
             decorate(event)
