@@ -58,11 +58,11 @@ Offsets will be picked up from registry file whenever it exists.
 
 __*file_head_bytes*__
 
-Specifies the header of the file in bytes that does not repeate over records. Usually, these are json opening tags. The default value is `0`.
+Specifies the header of the file in bytes that does not repeat over records. Usually, these are json opening tags. The default value is `0`.
 
 __*file_tail_bytes*__
   
-Specifies the tail of the file that does not repeate over records. Usually, these are json closing tags. The defaul tvalue is `0`.
+Specifies the tail of the file that does not repeat over records. Usually, these are json closing tags. The defaul tvalue is `0`.
 
 __*record_preprocess_reg_exp*__
 
@@ -176,9 +176,6 @@ output {
     stdout { 
         codec => rubydebug
     }
-    # elasticsearch {
-    #     hosts => [ "104.45.235.164:9200" ]
-    # }
 }
 ```
 
