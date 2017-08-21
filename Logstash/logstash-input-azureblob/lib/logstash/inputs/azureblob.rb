@@ -147,7 +147,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
           end
 
           # Putting header and content and tail together before pushing into event queue
-          processed_content = "#{header}#{content}" unless header.nil? || header.length == 0
+          processed_content = "#{header}#{processed_content}" unless header.nil? || header.length == 0
                               
           @codec.decode(processed_content) do |event|
             decorate(event)
