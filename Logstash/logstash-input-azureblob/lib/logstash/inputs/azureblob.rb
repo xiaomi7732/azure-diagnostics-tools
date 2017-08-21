@@ -141,14 +141,15 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
           blob, content = @azure_blob.get_blob(@container, blob_name, {:start_range => start_index} )
 
           if(!@record_preprocess_reg_exp.nil?)
-            reg_exp = Regexp.new @record_preprocess_reg_exp
-            content = content.sub(reg_exp, '')
+            reg_exp = Regexp.new(@record_preprocess_reg_exp, Regexp::MULTILINE)
+            # contnet will be used to calculate the new offset. Create a new variable for processed content.
+            processed_content = content.sub(reg_exp, '')
           end
 
           # Putting header and content and tail together before pushing into event queue
-          content = "#{header}#{content}" unless header.nil? || header.length == 0
+          processed_content = "#{header}#{content}" unless header.nil? || header.length == 0
                               
-          @codec.decode(content) do |event|
+          @codec.decode(processed_content) do |event|
             decorate(event)
             queue << event
           end # decode
