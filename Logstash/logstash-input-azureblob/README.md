@@ -66,7 +66,11 @@ Specifies the tail of the file that does not repeat over records. Usually, these
 
 __*record_preprocess_reg_exp*__
 
-Specify the regular expression to process content before pushing the event. The matched will be removed. For example, `^\s*,` will removing the leading ',' from the content. The regular expression uses multiline mode.
+Specifies the regular expression to process content before pushing the event. The matched will be removed. For example, `^\s*,` will removing the leading `,` from the content. The regular expression uses multiline mode.
+
+__*blob_list_page_size*__
+
+Specifies the page-size for returned blob items. Too big number will hit heap overflow; Too small number will leads to too many requests. The default of `100` is good for heap size of 1G.
 
 ### Examples
 

@@ -77,14 +77,19 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   # When set to `start_over`, it will read all log files from begining.
   config :registry_create_policy, :validate => :string, :default => 'resume'
 
-  # Set the header of the file that does not repeat over records. Usually, these are json opening tags.
+  # Sets the header of the file that does not repeat over records. Usually, these are json opening tags.
   config :file_head_bytes, :validate => :number, :default => 0
 
-  # Set the tail of the file that does not repeat over records. Usually, these are json closing tags.
+  # Sets the tail of the file that does not repeat over records. Usually, these are json closing tags.
   config :file_tail_bytes, :validate => :number, :default => 0
 
-  # Set the regular expression to process content before pushing the event.
+  # Sets the regular expression to process content before pushing the event.
   config :record_preprocess_reg_exp, :validate => :string
+
+  # Sets the page-size for returned blob items. Too big number will hit heap overflow; Too small number will leads to too many requests.
+  #
+  # The default, `100` is good for default heap size of 1G.
+  config :blob_list_page_size, :validate => :number, :default => 100
 
   # Constant of max integer
   MAX = 2 ** ([42].pack('i').size * 16 -2 ) -1
@@ -181,8 +186,10 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   def list_all_blobs
     blobs = Set.new []
     continuation_token = NIL
+    @blob_list_page_size = 100 if @blob_list_page_size <= 0
     loop do
-      entries = @azure_blob.list_blobs(@container, { :timeout => 10, :marker => continuation_token})
+      # Need to limit the returned number of the returned entries to avoid out of memory exception.
+      entries = @azure_blob.list_blobs(@container, { :timeout => 10, :marker => continuation_token, :max_results => @blob_list_page_size })
       entries.each do |entry|
         blobs << entry
       end # each
