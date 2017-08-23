@@ -55,14 +55,14 @@ class LogStash::Inputs::Azuretopicthreadable < LogStash::Inputs::Base
         if message
           # decoding returns a yield
           codec.decode(message.body) do |event|
-          decorate(event)
-          output_queue << event
+              decorate(event)
+              output_queue << event
+          end
           # delete the message after reading it
           azure_service_bus.delete_subscription_message(message)
         else
           Stud.stoppable_sleep(@thread_sleep_time) { stop? } #topic is probably empty. sleep. 
         end
-      end
       rescue LogStash::ShutdownSignal => e
         raise e
       rescue => e
