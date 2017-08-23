@@ -190,7 +190,7 @@ input {
          container => "insights-logs-networksecuritygroupflowevent"
          codec => "json"
          file_head_bytes => 21
-         file_tail_bytes => 8
+         file_tail_bytes => 9
          record_preprocess_reg_exp => "^\s*,"
      }
    }
