@@ -162,6 +162,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
         ensure
           # Making sure the reader is removed from the registry even when there's exception.
           new_offset = start_index
+          new_offset = 0 if start_index == @file_head_bytes
           new_offset = new_offset + content.length unless content.nil?
           new_registry_item = LogStash::Inputs::RegistryItem.new(blob_name, new_etag, nil, new_offset, gen)
           update_registry(new_registry_item)
