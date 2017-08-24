@@ -86,6 +86,9 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   # Sets the regular expression to process content before pushing the event.
   config :record_preprocess_reg_exp, :validate => :string
 
+  # Sets the regular expression to break big event, mainly for giant json file.
+  config :break_event_reg_exp, :validate => :string, :default => '^\s*,'
+
   # Sets the page-size for returned blob items. Too big number will hit heap overflow; Too small number will leads to too many requests.
   #
   # The default, `100` is good for default heap size of 1G.
@@ -156,21 +159,35 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
           @logger.info("Start process content")
           # content will be used to calculate the new offset. Create a new variable for processed content.
           processed_content = content
+
+          tail = content[-@file_tail_bytes] if @file_tail_bytes > 0
+
           if(!@record_preprocess_reg_exp.nil?)
             reg_exp = Regexp.new(@record_preprocess_reg_exp, Regexp::MULTILINE)
             processed_content = content.sub(reg_exp, '')
           end
 
+          break_event_reg_exp = Regexp.new(@break_event_reg_exp)
           # Putting header and content and tail together before pushing into event queue
-          processed_content = "#{header}#{processed_content}" unless header.nil? || header.length == 0
+          # // TODO: When processed content is too big, the codec won't be able to decode it in time and will blow up the heap.
+          while processed_content.length > @file_tail_bytes
+            cursor = processed_content.index break_event_reg_exp
+            decode_unit = processed_content[0..cursor]
+            processed_content = processed_content[cursor..-1].sub(reg_exp, '')
+            decode_unit = "#{header}#{decode_unit}#{tail}" unless header.nil? || header.length == 0
+            @logger.info("Start sending events")
+            
+            @codec.decode(decode_unit) do |event|
+              @logger.info("Finished decode: #{decode_unit}")          
+              decorate(event)
+              queue << event
+            end # decode
+            
+            @logger.info("Done sending events")          
+          end #while
           @logger.info("Done process content")
           
-          @logger.info("Start sending events")
-          @codec.decode(processed_content) do |event|
-            decorate(event)
-            queue << event
-          end # decode
-          @logger.info("Done sending events")
+
         ensure
           # Making sure the reader is removed from the registry even when there's exception.
           new_offset = start_index
