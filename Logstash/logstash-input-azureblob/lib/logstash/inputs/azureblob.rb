@@ -99,19 +99,23 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
     # this is the reader # for this specific instance.
     @reader = SecureRandom.uuid
     @registry_locker = "#{@registry_path}.lock"
-   
-    # Setup a specific instance of an Azure::Storage::Client
-    client = Azure::Storage::Client.create(:storage_account_name => @storage_account_name, :storage_access_key => @storage_access_key, :storage_blob_host => "https://#{@storage_account_name}.blob.#{@endpoint}")
-    # Get an azure storage blob service object from a specific instance of an Azure::Storage::Client
-    @azure_blob = client.blob_client
-    # Add retry filter to the service object
-    @azure_blob.with_filter(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter.new)
   end # def register
 
   def run(queue)
     # we can abort the loop if stop? becomes true
     while !stop?
+      # Setup a specific instance of an Azure::Storage::Client
+      client = Azure::Storage::Client.create(:storage_account_name => @storage_account_name, :storage_access_key => @storage_access_key, :storage_blob_host => "https://#{@storage_account_name}.blob.#{@endpoint}")
+      # Get an azure storage blob service object from a specific instance of an Azure::Storage::Client
+      @azure_blob = client.blob_client
+      # Add retry filter to the service object
+      @azure_blob.with_filter(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter.new)
+
       process(queue)
+
+      client = nil
+      GC.start
+      
       Stud.stoppable_sleep(@interval) { stop? }
     end # loop
   end # def run
