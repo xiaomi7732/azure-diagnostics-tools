@@ -110,11 +110,13 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
       @azure_blob = client.blob_client
       # Add retry filter to the service object
       @azure_blob.with_filter(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter.new)
-
+      @logger.info("Start process")
       process(queue)
 
+      @logger.info("Start Recycle client")
       client = nil
       GC.start
+      @logger.info("Done Recycle client")
       
       Stud.stoppable_sleep(@interval) { stop? }
     end # loop
@@ -146,9 +148,12 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
             start_index = start_index - @file_tail_bytes
             start_index = 0 if start_index < 0
           end
-
-          blob, content = @azure_blob.get_blob(@container, blob_name, {:start_range => start_index} )
           
+          @logger.info("Start reading blog: #{blob_name}")
+          blob, content = @azure_blob.get_blob(@container, blob_name, {:start_range => start_index} )
+          @logger.info("Done reading blog: #{blob_name}")
+          
+          @logger.info("Start process content")
           # content will be used to calculate the new offset. Create a new variable for processed content.
           processed_content = content
           if(!@record_preprocess_reg_exp.nil?)
@@ -158,11 +163,14 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
 
           # Putting header and content and tail together before pushing into event queue
           processed_content = "#{header}#{processed_content}" unless header.nil? || header.length == 0
-                              
+          @logger.info("Done process content")
+          
+          @logger.info("Start sending events")
           @codec.decode(processed_content) do |event|
             decorate(event)
             queue << event
           end # decode
+          @logger.info("Done sending events")
         ensure
           # Making sure the reader is removed from the registry even when there's exception.
           new_offset = start_index
