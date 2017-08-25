@@ -153,11 +153,9 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
           # TODO: handle break_json_to_event_policy = with_header | without_header | do_not_break
           if true
             tail = processed_content[-@file_tail_bytes..-1]
-            @logger.info("Tail: #{tail}")
             while (processed_content.length > @file_tail_bytes) 
               json_event, processed_content = get_first_json(processed_content)
               json_event = "#{header}#{json_event}#{tail}"
-              @logger.info("Json event: #{json_event}")
               @codec.decode(json_event) do |event|
                 decorate(event)
                 queue << event
