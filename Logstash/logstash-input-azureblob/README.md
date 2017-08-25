@@ -64,13 +64,23 @@ __*file_tail_bytes*__
   
 Specifies the tail of the file that does not repeat over records. Usually, these are json closing tags. The defaul tvalue is `0`.
 
-__*record_preprocess_reg_exp*__
+### Advanced tweaking parameters
 
-Specifies the regular expression to process content before pushing the event. The matched will be removed. For example, `^\s*,` will removing the leading `,` from the content. The regular expression uses multiline mode.
+Keep these parameters default to use under normal situration. Tweak these parameters when dealing with large scale azure blobs and logs.
 
 __*blob_list_page_size*__
 
 Specifies the page-size for returned blob items. Too big number will hit heap overflow; Too small number will leads to too many requests. The default of `100` is good for heap size of 1G.
+
+__*break_json_down_policy*__
+
+Only works when the codec is set to `json`. Sets the policy to break the json object in the array into small events. Break json into small sections will not be as efficient as keep it as a whole, but will reduce the usage of the memory. Possible options: `do_not_break`, `with_head_tail`, `without_head_tail`. 
+
+The default value is: `do_not_break`.
+
+__*break_json_batch_count*__
+
+Only works when the codec is set to `json`. Sets when break json happens, how many json object will be put in 1 batch. The bigger this is set, more memory is taken and the bigger the json will be handing to the codec. This is useful when we need to break the big json array into small pieces. Set to `1` when expect to send json 1 by 1 in the array.
 
 ### Examples
 
@@ -193,9 +203,13 @@ input {
          storage_access_key => "VGhpcyBpcyBhIGZha2Uga2V5Lg=="
          container => "insights-logs-networksecuritygroupflowevent"
          codec => "json"
+         # Refer https://docs.microsoft.com/en-us/azure/network-watcher/network-watcher-read-nsg-flow-logs
+         # Typical numbers could be 21/9 or 12/2 depends on the nsg log file types
          file_head_bytes => 21
          file_tail_bytes => 9
-         record_preprocess_reg_exp => "^\s*,"
+         # Enable / tweak these settings when event is too big for codec to handle.
+         # break_json_down_policy => "with_head_tail"
+         # break_json_batch_count => 2
      }
    }
 
