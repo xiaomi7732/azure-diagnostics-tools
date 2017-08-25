@@ -92,7 +92,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   config :break_json_down_policy, :validate => :string, :default => 'do_not_break'
 
   # Sets when break json happens, how many json object will be put in 1 batch
-  config :break_json_batch_count, :validate => :number, :default => 100
+  config :break_json_batch_count, :validate => :number, :default => 10
   
   # Sets the page-size for returned blob items. Too big number will hit heap overflow; Too small number will leads to too many requests.
   #
