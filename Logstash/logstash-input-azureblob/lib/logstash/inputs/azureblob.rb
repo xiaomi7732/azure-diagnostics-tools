@@ -153,7 +153,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
           # TODO: handle break_json_to_event_policy = with_header | without_header | do_not_break
           if true
             tail = processed_content[-@file_tail_bytes..-1]
-            while (processed_content.length > @file_tail_bytes) 
+            while (!processed_content.nil? && processed_content.length > @file_tail_bytes) 
               json_event, processed_content = get_first_json(processed_content)
               json_event = "#{header}#{json_event}#{tail}"
               @codec.decode(json_event) do |event|
@@ -172,6 +172,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
         ensure
           # Making sure the reader is removed from the registry even when there's exception.
           new_offset = start_index
+          new_offset = 0 if start_index == @file_head_bytes && content.nil? # Reset the offset when nothing has been read.
           new_offset = new_offset + content.length unless content.nil?
           new_registry_item = LogStash::Inputs::RegistryItem.new(blob_name, new_etag, nil, new_offset, gen)
           update_registry(new_registry_item)
