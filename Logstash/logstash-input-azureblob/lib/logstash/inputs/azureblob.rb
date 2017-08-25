@@ -83,8 +83,13 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   # Sets the tail of the file that does not repeat over records. Usually, these are json closing tags.
   config :file_tail_bytes, :validate => :number, :default => 0
 
-  # Sets the regular expression to process content before pushing the event.
-  config :record_preprocess_reg_exp, :validate => :string
+  # Sets how to break json
+  #
+  # Only works when the codec is set to `json`. Sets the policy to break the json object in the array into small events.
+  # Break json into small sections will not be as efficient as keep it as a whole, but will reduce the usage of 
+  # the memory. 
+  # Possible options: `do_not_break`, `with_head_tail`, `without_head_tail`
+  config :break_json_down_policy, :validate => :string, :default => 'do_not_break'
 
   # Sets the page-size for returned blob items. Too big number will hit heap overflow; Too small number will leads to too many requests.
   #
@@ -144,24 +149,33 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
           end
 
           blob, content = @azure_blob.get_blob(@container, blob_name, {:start_range => start_index} )
-          
+
           # content will be used to calculate the new offset. Create a new variable for processed content.
           processed_content = content
-          skip = processed_content.index '{'
-          processed_content = processed_content[skip..-1] unless skip.nil?
-          
-          # TODO: handle break_json_to_event_policy = with_header | without_header | do_not_break
-          if true
+
+          is_json_codec = @codec.is_a? LogStash::Codecs::JSON
+          if (is_json_codec)
+            skip = processed_content.index '{'
+            processed_content = processed_content[skip..-1] unless skip.nil?
+          end #if
+
+          if is_json_codec && (@break_json_down_policy != 'do_not_break')
+            @logger.debug("codec is json and policy is not do_not_break")
+
             tail = processed_content[-@file_tail_bytes..-1]
             while (!processed_content.nil? && processed_content.length > @file_tail_bytes) 
               json_event, processed_content = get_first_json(processed_content)
-              json_event = "#{header}#{json_event}#{tail}"
+              if @break_json_down_policy == 'with_head_tail'
+                @logger.debug("Adding json head/tails.")
+                json_event = "#{header}#{json_event}#{tail}"
+              end #if
               @codec.decode(json_event) do |event|
                 decorate(event)
                 queue << event
               end # decode
             end
           else
+            @logger.debug("Non-json codec or the policy is do not break")
             # Putting header and content and tail together before pushing into event queue
             processed_content = "#{header}#{processed_content}" unless header.nil? || header.length == 0
             @codec.decode(processed_content) do |event|
@@ -184,6 +198,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   end # process
   
   # Get first json object out of a string, return the rest of the string
+  # TODO: improve the efficiency
   def get_first_json(content)
     return nil, content if content.nil? || content.length == 0
     return nil if (content.index '{').nil?
