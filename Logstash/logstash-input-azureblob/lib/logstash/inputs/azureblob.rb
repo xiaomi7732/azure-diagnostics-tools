@@ -171,9 +171,9 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
             while (!processed_content.nil? && processed_content.length > @file_tail_bytes)
               json_event, processed_content = get_jsons(processed_content, @break_json_batch_count)
               @logger.debug("Got json: ========================")
-              @logger.debug(json_event)
+              @logger.debug("#{json_event[0..50]}...#{json_event[-50..-1]}")
               @logger.debug("End got json: ========================")
-              
+              @logger.debug("Processed content: #{processed_content[0..50]}...")
               break if json_event.nil?
               if @break_json_down_policy == 'with_head_tail'
                 @logger.debug("Adding json head/tails.")
@@ -209,16 +209,18 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   
   # Get first json object out of a string, return the rest of the string
   def get_jsons(content, batch_size)
-    return nil, content if content.nil? || content.length == 0
-    return nil, content if (content.index '{').nil?
+    return nil, content, 0 if content.nil? || content.length == 0
+    return nil, content, 0 if (content.index '{').nil?
 
     hit = 0
     count = 0
     index = 0
     first = content.index('{')
+    move_opening = true
+    move_closing = true
     while(hit < batch_size)
-        inIndex = content.index('{', index)
-        outIndex = content.index('}', index)
+        inIndex = content.index('{', index) if move_opening
+        outIndex = content.index('}', index) if move_closing
 
         # TODO: Fix the ending condition
         break if count == 0 && (inIndex.nil? || outIndex.nil?)
@@ -232,8 +234,12 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
         end #if
         if content[index] == '{'
             count += 1
+            move_opening = true
+            move_closing = false
         elsif content[index] == '}'
             count -= 1
+            move_closing = true
+            move_opening = false
         end #if
         index += 1
         hit += 1 if count == 0
