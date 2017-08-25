@@ -91,6 +91,9 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   # Possible options: `do_not_break`, `with_head_tail`, `without_head_tail`
   config :break_json_down_policy, :validate => :string, :default => 'do_not_break'
 
+  # Sets when break json happens, how many json object will be put in 1 batch
+  config :break_json_batch_count, :validate => :number, :default => 100
+  
   # Sets the page-size for returned blob items. Too big number will hit heap overflow; Too small number will leads to too many requests.
   #
   # The default, `100` is good for default heap size of 1G.
@@ -117,6 +120,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
     # we can abort the loop if stop? becomes true
     while !stop?
       process(queue)
+      @logger.debug("Hitting interval of #{@interval}ms . . .")
       Stud.stoppable_sleep(@interval) { stop? }
     end # loop
   end # def run
@@ -161,10 +165,16 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
 
           if is_json_codec && (@break_json_down_policy != 'do_not_break')
             @logger.debug("codec is json and policy is not do_not_break")
-
+            
+            @break_json_batch_count = 1 if break_json_batch_count <= 0
             tail = processed_content[-@file_tail_bytes..-1]
-            while (!processed_content.nil? && processed_content.length > @file_tail_bytes) 
-              json_event, processed_content = get_first_json(processed_content)
+            while (!processed_content.nil? && processed_content.length > @file_tail_bytes)
+              json_event, processed_content = get_jsons(processed_content, @break_json_batch_count)
+              @logger.debug("Got json: ========================")
+              @logger.debug(json_event)
+              @logger.debug("End got json: ========================")
+              
+              break if json_event.nil?
               if @break_json_down_policy == 'with_head_tail'
                 @logger.debug("Adding json head/tails.")
                 json_event = "#{header}#{json_event}#{tail}"
@@ -198,29 +208,38 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   end # process
   
   # Get first json object out of a string, return the rest of the string
-  # TODO: improve the efficiency
-  def get_first_json(content)
+  def get_jsons(content, batch_size)
     return nil, content if content.nil? || content.length == 0
     return nil, content if (content.index '{').nil?
 
-    hit = false
+    hit = 0
     count = 0
     index = 0
-    first = 0
-    while(!hit || count != 0)
-      if content[index] == '{'
-        first = index unless hit
-        hit = true
-        count += 1
-      elsif content[index] == '}'
-        count -= 1
-      end #if
-      index += 1
-    end
-    # Adjust index
-    index -= 1
+    first = content.index('{')
+    while(hit < batch_size)
+        inIndex = content.index('{', index)
+        outIndex = content.index('}', index)
 
-    return content[first..index], content[index+1..-1]
+        # TODO: Fix the ending condition
+        break if count == 0 && (inIndex.nil? || outIndex.nil?)
+        
+        if(inIndex.nil?)
+            index = outIndex
+        elsif(outIndex.nil?)
+            index = inIndex
+        else
+            index = [inIndex, outIndex].min
+        end #if
+        if content[index] == '{'
+            count += 1
+        elsif content[index] == '}'
+            count -= 1
+        end #if
+        index += 1
+        hit += 1 if count == 0
+    end
+    
+    return content[first..index-1], content[index..-1], hit
   end #def get_first_json
 
   # Deserialize registry hash from json string.
