@@ -132,11 +132,11 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
           new_etag = blob.properties[:etag]
           # ~ Work-around
 
-          blob, header = @azure_blob.get_blob(@container, blob_name, {:end_range => @file_head_bytes}) if header.nil? unless @file_head_bytes.nil? or @file_head_bytes <= 0
+          blob, header = @azure_blob.get_blob(@container, blob_name, {:end_range => (@file_head_bytes-1) }) if header.nil? unless @file_head_bytes.nil? or @file_head_bytes <= 0
 
           if start_index == 0
             # Skip the header since it is already read.
-            start_index = start_index + @file_head_bytes
+            start_index = @file_head_bytes
           else
             # Adjust the offset when it is other than first time, then read till the end of the file, including the tail.
             start_index = start_index - @file_tail_bytes
@@ -147,18 +147,30 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
           
           # content will be used to calculate the new offset. Create a new variable for processed content.
           processed_content = content
-          if(!@record_preprocess_reg_exp.nil?)
-            reg_exp = Regexp.new(@record_preprocess_reg_exp, Regexp::MULTILINE)
-            processed_content = content.sub(reg_exp, '')
-          end
-
-          # Putting header and content and tail together before pushing into event queue
-          processed_content = "#{header}#{processed_content}" unless header.nil? || header.length == 0
-                              
-          @codec.decode(processed_content) do |event|
-            decorate(event)
-            queue << event
-          end # decode
+          skip = processed_content.index '{'
+          processed_content = processed_content[skip..-1]
+          
+          # TODO: handle break_json_to_event_policy = with_header | without_header | do_not_break
+          if true
+            tail = processed_content[-@file_tail_bytes..-1]
+            @logger.info("Tail: #{tail}")
+            while (processed_content.length > @file_tail_bytes) 
+              json_event, processed_content = get_first_json(processed_content)
+              json_event = "#{header}#{json_event}#{tail}"
+              @logger.info("Json event: #{json_event}")
+              @codec.decode(json_event) do |event|
+                decorate(event)
+                queue << event
+              end # decode
+            end
+          else
+            # Putting header and content and tail together before pushing into event queue
+            processed_content = "#{header}#{processed_content}" unless header.nil? || header.length == 0
+            @codec.decode(processed_content) do |event|
+              decorate(event)
+              queue << event
+            end # decode
+          end #if
         ensure
           # Making sure the reader is removed from the registry even when there's exception.
           new_offset = start_index
@@ -172,6 +184,29 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
       @logger.error("Oh My, An error occurred. \nError:#{e}:\nTrace:\n#{e.backtrace}", :exception => e)
     end # begin
   end # process
+  
+  # Get first json object out of a string, return the rest of the string
+  def get_first_json(content)
+    return nil, content if content.nil? || content.length == 0
+    hit = false
+    count = 0
+    index = 0
+    first = 0
+    while(!hit || count != 0)
+      if content[index] == '{'
+        first = index unless hit
+        hit = true
+        count += 1
+      elsif content[index] == '}'
+        count -= 1
+      end #if
+      index += 1
+    end
+    # Adjust index
+    index -= 1
+
+    return content[first..index], content[index+1..-1]
+  end #def get_first_json
 
   # Deserialize registry hash from json string.
   def deserialize_registry_hash (json_string)
