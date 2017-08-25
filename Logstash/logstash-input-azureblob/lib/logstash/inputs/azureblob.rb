@@ -201,7 +201,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   # TODO: improve the efficiency
   def get_first_json(content)
     return nil, content if content.nil? || content.length == 0
-    return nil if (content.index '{').nil?
+    return nil, content if (content.index '{').nil?
 
     hit = false
     count = 0
