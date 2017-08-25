@@ -148,7 +148,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
           # content will be used to calculate the new offset. Create a new variable for processed content.
           processed_content = content
           skip = processed_content.index '{'
-          processed_content = processed_content[skip..-1]
+          processed_content = processed_content[skip..-1] unless skip.nil?
           
           # TODO: handle break_json_to_event_policy = with_header | without_header | do_not_break
           if true
@@ -174,7 +174,6 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
         ensure
           # Making sure the reader is removed from the registry even when there's exception.
           new_offset = start_index
-          new_offset = 0 if start_index == @file_head_bytes
           new_offset = new_offset + content.length unless content.nil?
           new_registry_item = LogStash::Inputs::RegistryItem.new(blob_name, new_etag, nil, new_offset, gen)
           update_registry(new_registry_item)
@@ -188,6 +187,8 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   # Get first json object out of a string, return the rest of the string
   def get_first_json(content)
     return nil, content if content.nil? || content.length == 0
+    return nil if (content.index '{').nil?
+
     hit = false
     count = 0
     index = 0
