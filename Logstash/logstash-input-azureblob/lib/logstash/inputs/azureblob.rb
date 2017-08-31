@@ -157,7 +157,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
           # content will be used to calculate the new offset. Create a new variable for processed content.
           processed_content = content
 
-          is_json_codec = @codec.is_a? LogStash::Codecs::JSON
+          is_json_codec = (defined?(LogStash::Codecs::JSON) == 'constant') && (@codec.is_a? LogStash::Codecs::JSON)
           if (is_json_codec)
             skip = processed_content.index '{'
             processed_content = processed_content[skip..-1] unless skip.nil?
