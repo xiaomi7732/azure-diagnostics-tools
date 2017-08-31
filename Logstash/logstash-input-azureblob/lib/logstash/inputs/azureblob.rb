@@ -77,6 +77,28 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   # When set to `start_over`, it will read all log files from begining.
   config :registry_create_policy, :validate => :string, :default => 'resume'
 
+  # Sets the header of the file that does not repeat over records. Usually, these are json opening tags.
+  config :file_head_bytes, :validate => :number, :default => 0
+
+  # Sets the tail of the file that does not repeat over records. Usually, these are json closing tags.
+  config :file_tail_bytes, :validate => :number, :default => 0
+
+  # Sets how to break json
+  #
+  # Only works when the codec is set to `json`. Sets the policy to break the json object in the array into small events.
+  # Break json into small sections will not be as efficient as keep it as a whole, but will reduce the usage of 
+  # the memory. 
+  # Possible options: `do_not_break`, `with_head_tail`, `without_head_tail`
+  config :break_json_down_policy, :validate => :string, :default => 'do_not_break'
+
+  # Sets when break json happens, how many json object will be put in 1 batch
+  config :break_json_batch_count, :validate => :number, :default => 10
+  
+  # Sets the page-size for returned blob items. Too big number will hit heap overflow; Too small number will leads to too many requests.
+  #
+  # The default, `100` is good for default heap size of 1G.
+  config :blob_list_page_size, :validate => :number, :default => 100
+
   # Constant of max integer
   MAX = 2 ** ([42].pack('i').size * 16 -2 ) -1
 
@@ -98,6 +120,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
     # we can abort the loop if stop? becomes true
     while !stop?
       process(queue)
+      @logger.debug("Hitting interval of #{@interval}ms . . .")
       Stud.stoppable_sleep(@interval) { stop? }
     end # loop
   end # def run
@@ -117,15 +140,63 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
           # Work-around: After returned by get_blob, the etag will contains quotes.
           new_etag = blob.properties[:etag]
           # ~ Work-around
-          blob, content = @azure_blob.get_blob(@container, blob_name, {:start_range=>start_index} )
-          
-          @codec.decode(content) do |event|
-            decorate(event)
-            queue << event
-          end # decode
+
+          blob, header = @azure_blob.get_blob(@container, blob_name, {:end_range => (@file_head_bytes-1) }) if header.nil? unless @file_head_bytes.nil? or @file_head_bytes <= 0
+
+          if start_index == 0
+            # Skip the header since it is already read.
+            start_index = @file_head_bytes
+          else
+            # Adjust the offset when it is other than first time, then read till the end of the file, including the tail.
+            start_index = start_index - @file_tail_bytes
+            start_index = 0 if start_index < 0
+          end
+
+          blob, content = @azure_blob.get_blob(@container, blob_name, {:start_range => start_index} )
+
+          # content will be used to calculate the new offset. Create a new variable for processed content.
+          processed_content = content
+
+          is_json_codec = (defined?(LogStash::Codecs::JSON) == 'constant') && (@codec.is_a? LogStash::Codecs::JSON)
+          if (is_json_codec)
+            skip = processed_content.index '{'
+            processed_content = processed_content[skip..-1] unless skip.nil?
+          end #if
+
+          if is_json_codec && (@break_json_down_policy != 'do_not_break')
+            @logger.debug("codec is json and policy is not do_not_break")
+            
+            @break_json_batch_count = 1 if break_json_batch_count <= 0
+            tail = processed_content[-@file_tail_bytes..-1]
+            while (!processed_content.nil? && processed_content.length > @file_tail_bytes)
+              json_event, processed_content = get_jsons(processed_content, @break_json_batch_count)
+              @logger.debug("Got json: ========================")
+              @logger.debug("#{json_event[0..50]}...#{json_event[-50..-1]}")
+              @logger.debug("End got json: ========================")
+              @logger.debug("Processed content: #{processed_content[0..50]}...")
+              break if json_event.nil?
+              if @break_json_down_policy == 'with_head_tail'
+                @logger.debug("Adding json head/tails.")
+                json_event = "#{header}#{json_event}#{tail}"
+              end #if
+              @codec.decode(json_event) do |event|
+                decorate(event)
+                queue << event
+              end # decode
+            end
+          else
+            @logger.debug("Non-json codec or the policy is do not break")
+            # Putting header and content and tail together before pushing into event queue
+            processed_content = "#{header}#{processed_content}" unless header.nil? || header.length == 0
+            @codec.decode(processed_content) do |event|
+              decorate(event)
+              queue << event
+            end # decode
+          end #if
         ensure
           # Making sure the reader is removed from the registry even when there's exception.
           new_offset = start_index
+          new_offset = 0 if start_index == @file_head_bytes && content.nil? # Reset the offset when nothing has been read.
           new_offset = new_offset + content.length unless content.nil?
           new_registry_item = LogStash::Inputs::RegistryItem.new(blob_name, new_etag, nil, new_offset, gen)
           update_registry(new_registry_item)
@@ -135,6 +206,47 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
       @logger.error("Oh My, An error occurred. \nError:#{e}:\nTrace:\n#{e.backtrace}", :exception => e)
     end # begin
   end # process
+  
+  # Get first json object out of a string, return the rest of the string
+  def get_jsons(content, batch_size)
+    return nil, content, 0 if content.nil? || content.length == 0
+    return nil, content, 0 if (content.index '{').nil?
+
+    hit = 0
+    count = 0
+    index = 0
+    first = content.index('{')
+    move_opening = true
+    move_closing = true
+    while(hit < batch_size)
+        inIndex = content.index('{', index) if move_opening
+        outIndex = content.index('}', index) if move_closing
+
+        # TODO: Fix the ending condition
+        break if count == 0 && (inIndex.nil? || outIndex.nil?)
+        
+        if(inIndex.nil?)
+            index = outIndex
+        elsif(outIndex.nil?)
+            index = inIndex
+        else
+            index = [inIndex, outIndex].min
+        end #if
+        if content[index] == '{'
+            count += 1
+            move_opening = true
+            move_closing = false
+        elsif content[index] == '}'
+            count -= 1
+            move_closing = true
+            move_opening = false
+        end #if
+        index += 1
+        hit += 1 if count == 0
+    end
+    
+    return content[first..index-1], content[index..-1], hit
+  end #def get_first_json
 
   # Deserialize registry hash from json string.
   def deserialize_registry_hash (json_string)
@@ -150,8 +262,10 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   def list_all_blobs
     blobs = Set.new []
     continuation_token = NIL
+    @blob_list_page_size = 100 if @blob_list_page_size <= 0
     loop do
-      entries = @azure_blob.list_blobs(@container, { :timeout => 10, :marker => continuation_token})
+      # Need to limit the returned number of the returned entries to avoid out of memory exception.
+      entries = @azure_blob.list_blobs(@container, { :timeout => 10, :marker => continuation_token, :max_results => @blob_list_page_size })
       entries.each do |entry|
         blobs << entry
       end # each
