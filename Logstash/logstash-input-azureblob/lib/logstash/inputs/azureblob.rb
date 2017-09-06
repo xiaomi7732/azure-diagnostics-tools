@@ -160,7 +160,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
           is_json_codec = (defined?(LogStash::Codecs::JSON) == 'constant') && (@codec.is_a? LogStash::Codecs::JSON)
           if (is_json_codec)
             skip = processed_content.index '{'
-            processed_content = processed_content[skip..-1] unless skip.nil?
+            processed_content.slice!(skip-1) unless (skip.nil? || skip == 0)
           end #if
 
           if is_json_codec && (@break_json_down_policy != 'do_not_break')
@@ -169,7 +169,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
             @break_json_batch_count = 1 if break_json_batch_count <= 0
             tail = processed_content[-@file_tail_bytes..-1]
             while (!processed_content.nil? && processed_content.length > @file_tail_bytes)
-              json_event, processed_content = get_jsons(processed_content, @break_json_batch_count)
+              json_event = get_jsons!(processed_content, @break_json_batch_count)
               @logger.debug("Got json: ========================")
               @logger.debug("#{json_event[0..50]}...#{json_event[-50..-1]}")
               @logger.debug("End got json: ========================")
@@ -207,8 +207,8 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
     end # begin
   end # process
   
-  # Get first json object out of a string, return the rest of the string
-  def get_jsons(content, batch_size)
+  # Get first json object out of a string and return it. Note, content will be updated in place as well.
+  def get_jsons!(content, batch_size)
     return nil, content, 0 if content.nil? || content.length == 0
     return nil, content, 0 if (content.index '{').nil?
 
@@ -245,7 +245,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
         hit += 1 if count == 0
     end
     
-    return content[first..index-1], content[index..-1], hit
+    return content.slice!(first..index-1), hit
   end #def get_first_json
 
   # Deserialize registry hash from json string.
