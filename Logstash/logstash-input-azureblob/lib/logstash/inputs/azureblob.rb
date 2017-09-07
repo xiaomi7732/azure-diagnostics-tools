@@ -219,30 +219,29 @@ def get_jsons!(content, batch_size)
   move_opening = true
   move_closing = true
   while(hit < batch_size)
-      inIndex = content.index('{', index) if move_opening
-      outIndex = content.index('}', index) if move_closing
+    inIndex = content.index('{', index) if move_opening
+    outIndex = content.index('}', index) if move_closing
 
-      # TODO: Fix the ending condition
-      break if count == 0 && (inIndex.nil? || outIndex.nil?)
-      
-      if(inIndex.nil?)
-          index = outIndex
-      elsif(outIndex.nil?)
-          index = inIndex
-      else
-          index = [inIndex, outIndex].min
-      end #if
-      if content[index] == '{'
-          count += 1
-          move_opening = true
-          move_closing = false
-      elsif content[index] == '}'
-          count -= 1
-          move_closing = true
-          move_opening = false
-      end #if
-      index += 1
-      hit += 1 if count == 0
+    break if count == 0 && (inIndex.nil? || outIndex.nil?)
+    
+    if(inIndex.nil?)
+      index = outIndex
+    elsif(outIndex.nil?)
+      index = inIndex
+    else
+      index = [inIndex, outIndex].min
+    end #if
+    if content[index] == '{'
+      count += 1
+      move_opening = true
+      move_closing = false
+    elsif content[index] == '}'
+      count -= 1
+      move_closing = true
+      move_opening = false
+    end #if
+    index += 1
+    hit += 1 if count == 0
   end
   # slice left & then right to making sure the leading characters are trimed.
   content.slice!(0, first) if first > 0
