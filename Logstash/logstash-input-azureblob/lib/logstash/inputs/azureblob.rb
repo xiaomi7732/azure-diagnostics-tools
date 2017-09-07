@@ -231,6 +231,7 @@ def get_jsons!(content, batch_size)
     else
       index = [inIndex, outIndex].min
     end #if
+
     if content[index] == '{'
       count += 1
       move_opening = true
@@ -241,6 +242,10 @@ def get_jsons!(content, batch_size)
       move_opening = false
     end #if
     index += 1
+
+    if (count < 0) 
+      throw "Malformed json encountered."
+    end #if
     hit += 1 if count == 0
   end
   # slice left & then right to making sure the leading characters are trimed.
