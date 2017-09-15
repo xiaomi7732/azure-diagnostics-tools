@@ -66,7 +66,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   # The default, `data/registry`, is used to coordinate readings for various instances of the clients.
   config :registry_path, :validate => :string, :default => 'data/registry'
   
-  # Set the value for registry file lock duration in seconds. It must be set to -1, or between 15 to 60 inclusively.
+  # Sets the value for registry file lock duration in seconds. It must be set to -1, or between 15 to 60 inclusively.
   #
   # The default, `15` means the registry file will be locked for at most 15 seconds. This should usually be sufficient to 
   # read the content of registry. Having this configuration here to allow lease expired in case the client crashed that 
