@@ -66,6 +66,13 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   # The default, `data/registry`, is used to coordinate readings for various instances of the clients.
   config :registry_path, :validate => :string, :default => 'data/registry'
   
+  # Set the value for registry file lock duration in seconds. It must be set to -1, or between 15 to 60 inclusively.
+  #
+  # The default, `15` means the registry file will be locked for at most 15 seconds. This should usually be sufficient to 
+  # read the content of registry. Having this configuration here to allow lease expired in case the client crashed that 
+  # never got a chance to release the lease for the registry.
+  config :registry_lease_duration, :validate => :number, :default => 15
+
   # Set how many seconds to keep idle before checking for new logs.
   #
   # The default, `30`, means trigger a reading for the log every 30 seconds after entering idle.
@@ -311,7 +318,7 @@ end #def get_jsons!
     retried = 0;
     while lease.nil? do
       begin
-        lease = @azure_blob.acquire_blob_lease(@container, blob_name, {:timeout => 10})
+        lease = @azure_blob.acquire_blob_lease(@container, blob_name, { :timeout => 10, :duration => @registry_lease_duration })
       rescue StandardError => e
         if(e.type == 'LeaseAlreadyPresent')
             if (retried > retry_times)
