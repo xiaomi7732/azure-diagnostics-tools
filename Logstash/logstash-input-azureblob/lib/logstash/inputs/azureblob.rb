@@ -265,7 +265,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
     @blob_list_page_size = 100 if @blob_list_page_size <= 0
     loop do
       # Need to limit the returned number of the returned entries to avoid out of memory exception.
-      entries = @azure_blob.list_blobs(@container, { :timeout => 10, :marker => continuation_token, :max_results => @blob_list_page_size })
+      entries = @azure_blob.list_blobs(@container, { :timeout => 60, :marker => continuation_token, :max_results => @blob_list_page_size })
       entries.each do |entry|
         blobs << entry
       end # each
@@ -300,20 +300,24 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
 
   # Acquire a lease on a blob item with retries.
   #
-  # By default, it will retry 30 times with 1 second interval.
-  def acquire_lease(blob_name, retry_times = 30, interval_sec = 1)
+  # By default, it will retry 60 times with 1 second interval.
+  def acquire_lease(blob_name, retry_times = 60, interval_sec = 1)
     lease = nil;
     retried = 0;
     while lease.nil? do
       begin
-        lease = @azure_blob.acquire_blob_lease(@container, blob_name, {:timeout => 10})
+        lease = @azure_blob.acquire_blob_lease(@container, blob_name, { :timeout => 60, :duration => @registry_lease_duration })
       rescue StandardError => e
-        if(e.type == 'LeaseAlreadyPresent')
-            if (retried > retry_times)
-                raise
-            end
-            retried += 1
-            sleep interval_sec
+        if(e.type && e.type == 'LeaseAlreadyPresent')
+          if (retried > retry_times)
+            raise
+          end
+          retried += 1
+          sleep interval_sec
+        else
+          # Anything else happend other than 'LeaseAlreadyPresent', break the lease. This is a work-around for the behavior that when
+          # timeout exception is hit, somehow, a infinite lease will be put on the lock file.
+          @azure_blob.break_blob_lease(@container, blob, { :break_period => 30 })
         end
       end
     end #while
