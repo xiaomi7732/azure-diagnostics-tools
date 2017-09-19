@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name          = 'logstash-input-azureeventhub'
-  s.version       = '0.9.7'
+  s.version       = '0.9.8'
   s.platform      = "java"
   s.licenses      = ['Apache License (2.0)']
   s.summary       = "This plugin collects data from Azure Event Hubs."
@@ -24,9 +24,6 @@ Gem::Specification.new do |s|
     s.add_development_dependency 'logstash-devutils'
   
   #Jar dependencies
-  s.requirements << "jar 'org.apache.qpid:qpid-amqp-1-0-common', '0.32'"
-  s.requirements << "jar 'org.apache.qpid:qpid-amqp-1-0-client-jms', '0.32'"
-  s.requirements << "jar 'org.apache.qpid:qpid-client', '0.32'"
-  s.requirements << "jar 'org.apache.geronimo.specs:geronimo-jms_1.1_spec', '1.1.1'"
+  s.requirements << "jar 'com.microsoft.azure:azure-eventhubs', '0.14.5'"
   s.add_runtime_dependency 'jar-dependencies', '~> 0.3.2'
 end

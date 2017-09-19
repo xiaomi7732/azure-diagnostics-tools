@@ -66,6 +66,13 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
   # The default, `data/registry`, is used to coordinate readings for various instances of the clients.
   config :registry_path, :validate => :string, :default => 'data/registry'
   
+  # Sets the value for registry file lock duration in seconds. It must be set to -1, or between 15 to 60 inclusively.
+  #
+  # The default, `15` means the registry file will be locked for at most 15 seconds. This should usually be sufficient to 
+  # read the content of registry. Having this configuration here to allow lease expired in case the client crashed that 
+  # never got a chance to release the lease for the registry.
+  config :registry_lease_duration, :validate => :number, :default => 15
+
   # Set how many seconds to keep idle before checking for new logs.
   #
   # The default, `30`, means trigger a reading for the log every 30 seconds after entering idle.
@@ -155,26 +162,26 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
           blob, content = @azure_blob.get_blob(@container, blob_name, {:start_range => start_index} )
 
           # content will be used to calculate the new offset. Create a new variable for processed content.
-          processed_content = content
+          content_length = content.length unless content.nil?
 
           is_json_codec = (defined?(LogStash::Codecs::JSON) == 'constant') && (@codec.is_a? LogStash::Codecs::JSON)
           if (is_json_codec)
-            skip = processed_content.index '{'
-            processed_content = processed_content[skip..-1] unless skip.nil?
+            skip = content.index '{'
+            content.slice!(skip-1) unless (skip.nil? || skip == 0)
           end #if
 
           if is_json_codec && (@break_json_down_policy != 'do_not_break')
             @logger.debug("codec is json and policy is not do_not_break")
             
-            @break_json_batch_count = 1 if break_json_batch_count <= 0
-            tail = processed_content[-@file_tail_bytes..-1]
-            while (!processed_content.nil? && processed_content.length > @file_tail_bytes)
-              json_event, processed_content = get_jsons(processed_content, @break_json_batch_count)
+            @break_json_batch_count = 1 if @break_json_batch_count <= 0
+            tail = content[-@file_tail_bytes..-1]
+            while (!content.nil? && content.length > @file_tail_bytes)
+              json_event = get_jsons!(content, @break_json_batch_count)
+              break if json_event.nil?
               @logger.debug("Got json: ========================")
               @logger.debug("#{json_event[0..50]}...#{json_event[-50..-1]}")
               @logger.debug("End got json: ========================")
-              @logger.debug("Processed content: #{processed_content[0..50]}...")
-              break if json_event.nil?
+              @logger.debug("Processed content: #{content[0..50]}...")
               if @break_json_down_policy == 'with_head_tail'
                 @logger.debug("Adding json head/tails.")
                 json_event = "#{header}#{json_event}#{tail}"
@@ -187,8 +194,8 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
           else
             @logger.debug("Non-json codec or the policy is do not break")
             # Putting header and content and tail together before pushing into event queue
-            processed_content = "#{header}#{processed_content}" unless header.nil? || header.length == 0
-            @codec.decode(processed_content) do |event|
+            content = "#{header}#{content}" unless header.nil? || header.length == 0
+            @codec.decode(content) do |event|
               decorate(event)
               queue << event
             end # decode
@@ -197,7 +204,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
           # Making sure the reader is removed from the registry even when there's exception.
           new_offset = start_index
           new_offset = 0 if start_index == @file_head_bytes && content.nil? # Reset the offset when nothing has been read.
-          new_offset = new_offset + content.length unless content.nil?
+          new_offset = new_offset + content_length unless content_length.nil?
           new_registry_item = LogStash::Inputs::RegistryItem.new(blob_name, new_etag, nil, new_offset, gen)
           update_registry(new_registry_item)
         end # begin
@@ -207,46 +214,51 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
     end # begin
   end # process
   
-  # Get first json object out of a string, return the rest of the string
-  def get_jsons(content, batch_size)
-    return nil, content, 0 if content.nil? || content.length == 0
-    return nil, content, 0 if (content.index '{').nil?
+# Get json objects out of a string and return it. Note, content will be updated in place as well.
+def get_jsons!(content, batch_size)
+  return nil if content.nil? || content.length == 0
+  return nil if (content.index '{').nil?
 
-    hit = 0
-    count = 0
-    index = 0
-    first = content.index('{')
-    move_opening = true
-    move_closing = true
-    while(hit < batch_size)
-        inIndex = content.index('{', index) if move_opening
-        outIndex = content.index('}', index) if move_closing
+  hit = 0
+  count = 0
+  index = 0
+  first = content.index('{')
+  move_opening = true
+  move_closing = true
+  while(hit < batch_size)
+    inIndex = content.index('{', index) if move_opening
+    outIndex = content.index('}', index) if move_closing
 
-        # TODO: Fix the ending condition
-        break if count == 0 && (inIndex.nil? || outIndex.nil?)
-        
-        if(inIndex.nil?)
-            index = outIndex
-        elsif(outIndex.nil?)
-            index = inIndex
-        else
-            index = [inIndex, outIndex].min
-        end #if
-        if content[index] == '{'
-            count += 1
-            move_opening = true
-            move_closing = false
-        elsif content[index] == '}'
-            count -= 1
-            move_closing = true
-            move_opening = false
-        end #if
-        index += 1
-        hit += 1 if count == 0
-    end
+    break if count == 0 && (inIndex.nil? || outIndex.nil?)
     
-    return content[first..index-1], content[index..-1], hit
-  end #def get_first_json
+    if(inIndex.nil?)
+      index = outIndex
+    elsif(outIndex.nil?)
+      index = inIndex
+    else
+      index = [inIndex, outIndex].min
+    end #if
+
+    if content[index] == '{'
+      count += 1
+      move_opening = true
+      move_closing = false
+    elsif content[index] == '}'
+      count -= 1
+      move_closing = true
+      move_opening = false
+    end #if
+    index += 1
+
+    if (count < 0) 
+      throw "Malformed json encountered."
+    end #if
+    hit += 1 if count == 0
+  end
+  # slice left & then right to making sure the leading characters are trimed.
+  content.slice!(0, first) if first > 0
+  return content.slice!(0, index-first)
+end #def get_jsons!
 
   # Deserialize registry hash from json string.
   def deserialize_registry_hash (json_string)

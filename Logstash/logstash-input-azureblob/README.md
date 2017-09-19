@@ -134,7 +134,7 @@ filter {
   #
   if [bytesSent] {
     ruby {
-      code => "event['kilobytesSent'] = event['bytesSent'].to_i / 1024.0"
+      code => "event.set('kilobytesSent', event.get('bytesSent').to_i / 1024.0)"
     }
   }
 
@@ -142,7 +142,7 @@ filter {
   #
   if [bytesReceived] {
     ruby {
-      code => "event['kilobytesReceived'] = event['bytesReceived'].to_i / 1024.0"
+      code => "event.set('kilobytesReceived', event.get('bytesReceived').to_i / 1024.0 )"
     }
   }
 

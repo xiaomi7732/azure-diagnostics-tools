@@ -43,7 +43,7 @@ Port of the target Event Hub. Default value is 5671.
 
 __*receive_credits*__
 
-The credit number to limit the number of messages to receive in a processing cycle. Default value is 1000.
+The credit number to limit the number of messages to receive in a processing cycle. Value must be between 10 and 999. Default is 999.
 
 __*consumer_group*__
 
@@ -59,6 +59,10 @@ __*thread_wait_sec*__
 
 Specifies the time (in seconds) to wait before another try if no message was received.
 
+__*partition_receiver_epochs*__
+
+A map from partition (string) to epoch (integer). By default each partition doesn't have an epoch defined. For more information read https://blogs.msdn.microsoft.com/gyan/2014/09/02/event-hubs-receiver-epoch/ .
+
 ### Examples
 ```
 input
@@ -70,6 +74,7 @@ input
         namespace => "mysbns"
         eventhub => "myeventhub"
         partitions => 4
+        partition_receiver_epochs => { '2' => 42 '0' => 15 }
     }
 }
 ```
