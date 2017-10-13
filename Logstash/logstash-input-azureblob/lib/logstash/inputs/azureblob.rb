@@ -306,7 +306,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
       begin
         lease = @azure_blob.acquire_blob_lease(@container, blob_name, { :timeout => 60, :duration => @registry_lease_duration })
       rescue StandardError => e
-        if(e.type && e.type == 'LeaseAlreadyPresent')
+        if(e.respond_to?(:type) && e.type == 'LeaseAlreadyPresent')
           if (retried > retry_times)
             raise
           end
