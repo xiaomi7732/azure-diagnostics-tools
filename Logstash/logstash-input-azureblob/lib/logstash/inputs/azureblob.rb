@@ -315,7 +315,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
         else
           # Anything else happend other than 'LeaseAlreadyPresent', break the lease. This is a work-around for the behavior that when
           # timeout exception is hit, somehow, a infinite lease will be put on the lock file.
-          @azure_blob.break_blob_lease(@container, blob, { :break_period => 30 })
+          @azure_blob.break_blob_lease(@container, blob_name, { :break_period => 30 })
         end
       end
     end #while
