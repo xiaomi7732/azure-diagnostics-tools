@@ -139,7 +139,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
     # we can abort the loop if stop? becomes true
     while !stop?
       process(queue)
-      @logger.debug("Hitting interval of #{@interval}ms . . .")
+      @logger.debug("Hitting interval of #{@interval}s . . .")
       Stud.stoppable_sleep(@interval) { stop? }
     end # loop
   end # def run
