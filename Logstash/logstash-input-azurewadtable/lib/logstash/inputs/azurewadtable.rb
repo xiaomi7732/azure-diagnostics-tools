@@ -12,7 +12,8 @@ class LogStash::Inputs::AzureWADTable < LogStash::Inputs::Base
   milestone 1
 
   config :account_name, :validate => :string
-  config :access_key, :validate => :string
+  config :access_key, :validate => :string, :required => false # not required as the sas_token can alternatively be provided
+  config :sas_token, :validate => :string, :required => false # not required as the access_key can alternatively be provided
   config :table_name, :validate => :string
   config :entity_count_to_process, :validate => :string, :default => 100
   config :collection_start_time_utc, :validate => :string, :default => nil #the actual value is set in the ctor (now - data_latency_minutes - 1)
@@ -44,11 +45,20 @@ class LogStash::Inputs::AzureWADTable < LogStash::Inputs::Base
     user_agent = "logstash-input-azurewadtable"
     user_agent << "/" << Gem.latest_spec_for("logstash-input-azurewadtable").version.to_s
 
-    @client = Azure::Storage::Client.create(
-      :storage_account_name => @account_name,
-      :storage_access_key => @access_key,
-      :storage_table_host => "https://#{@account_name}.table.#{@endpoint}",
-      :user_agent_prefix => user_agent)
+    if @sas_token.nil?
+        @client = Azure::Storage::Client.create(
+        :storage_account_name => @account_name,
+        :storage_access_key => @access_key,
+        :storage_table_host => "https://#{@account_name}.table.#{@endpoint}",
+        :user_agent_prefix => user_agent)
+    else
+      @client = Azure::Storage::Client.create(
+        :storage_account_name => @account_name,
+        :storage_sas_token => @sas_token,
+        :storage_table_host => "https://#{@account_name}.table.#{@endpoint}",
+        :user_agent_prefix => user_agent)
+    end
+
     @azure_table_service = @client.table_client
 
     @last_timestamp = @collection_start_time_utc
