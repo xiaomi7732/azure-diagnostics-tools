@@ -76,7 +76,7 @@ class LogStash::Inputs::AzureWADTable < LogStash::Inputs::Base
       sleep @idle_delay
     end # while
   end # run
-
+  
   public
   def teardown
   end
