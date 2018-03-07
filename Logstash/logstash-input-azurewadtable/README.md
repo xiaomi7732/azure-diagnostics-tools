@@ -64,6 +64,23 @@ input
 }
 ```
 
+## Partition Key Format
+When fetching data from Azure storage, this plugin assumes the data was produced by the Windows Azure Diagnostics (WAD) agent and queries according to its partition key format. The format differs depending on the eventVolume parameter in WAD configuration. Here is a short explanation of the format, not meant to be a full explanation though.
+
+### Small (default)
+```
+0636543145200000000
+```
+
+### Medium or Large
+```
+0000000000000000001___0636543145200000000
+```
+
+For small eventVolume, the partition key is just the timestamp. This timestamp is a count of 100 nanoseconds since Jan 1st, 0001. The logic for computing this in the plugin is [here](https://github.com/Azure/azure-diagnostics-tools/blob/master/Logstash/logstash-input-azurewadtable/lib/logstash/inputs/azurewadtable.rb#L203).
+
+For medium and large eventVolume, three '_' and a partition id is prepended to the timestamp. (Example above: 0000000000000000001). This partition id allows Azure storage to further distribute the data so it can reach better throughput. For medium eventVolume, this number can be between 0 and 9. For large eventVolume, this number can be between 0 and 99.
+
 ## More information
 The source code of this plugin is hosted in GitHub repo [Microsoft Azure Diagnostics with ELK](https://github.com/Azure/azure-diagnostics-tools). We welcome you to provide feedback and/or contribute to the project.
 
