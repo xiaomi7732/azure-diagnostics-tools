@@ -54,6 +54,17 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
 
   # Set the container of the blobs.
   config :container, :validate => :string
+  
+  # The path(s) to the file(s) to use as an input.
+  # You can use filename patterns here, such as `logs/*.log`.
+  # If you use a pattern like `logs/**/*.log`, a recursive search
+  # of `logs` will be done for all `*.log` files.
+  # Do not include a leading `/`, as Azure path look like this:
+  # `path/to/blob/file.txt`
+  #
+  # You may also configure multiple paths. See an example
+  # on the <<array,Logstash configuration page>>.
+  config :path, :validate => :array, :default => ["**/*"]
 
   # Set the endpoint for the blobs.
   #
@@ -131,6 +142,9 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
     @azure_blob = client.blob_client
     # Add retry filter to the service object
     @azure_blob.with_filter(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter.new)
+    
+    # Add the registry_path to the list of matched blobs
+    @path << @registry_path
   end # def register
 
   def run(queue)
@@ -261,7 +275,10 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
       # Need to limit the returned number of the returned entries to avoid out of memory exception.
       entries = @azure_blob.list_blobs(@container, { :timeout => 60, :marker => continuation_token, :max_results => @blob_list_page_size })
       entries.each do |entry|
-        blobs << entry
+        # FNM_PATHNAME is required so that "**/test" can match "test" at the root folder
+        # FNM_EXTGLOB allows you to use "test{a,b,c}" to match either "testa", "testb" or "testc" (closer to shell behavior)
+        matched = @path.any? {|path| File.fnmatch?(path, entry.name, File::FNM_PATHNAME | File::FNM_EXTGLOB)}
+        blobs << entry if matched
       end # each
       continuation_token = entries.continuation_token
       break if continuation_token.empty?
