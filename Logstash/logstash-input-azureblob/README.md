@@ -25,6 +25,14 @@ __*container*__
 The blob container name.
 
 ### Optional Parameters
+__*path_filters*__
+
+The path(s) to the file(s) to use as an input. By default it will watch every files in the storage container. You can use filename patterns here, such as `logs/*.log`. If you use a pattern like `logs/**/*.log`, a recursive search of `logs` will be done for all `*.log` files.
+
+Do not include a leading `/`, as Azure path look like this: `path/to/blob/file.txt`
+
+You may also configure multiple paths. See an example on the [Logstash configuration page](http://www.elastic.co/guide/en/logstash/current/configuration-file-structure.html#array).
+
 __*endpoint*__
 
 Specifies the endpoint of Azure Service Management. The default value is `core.windows.net`. 
