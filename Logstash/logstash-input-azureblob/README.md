@@ -25,7 +25,7 @@ __*container*__
 The blob container name.
 
 ### Optional Parameters
-__*path*__
+__*path_filters*__
 
 The path(s) to the file(s) to use as an input. By default it will watch every files in the storage container. You can use filename patterns here, such as `logs/*.log`. If you use a pattern like `logs/**/*.log`, a recursive search of `logs` will be done for all `*.log` files.
 
