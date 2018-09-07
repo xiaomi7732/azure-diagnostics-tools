@@ -142,6 +142,7 @@ var wadcfgConfigPrototype = {
                 {
                     "name": "applicationInsights",
                     "ApplicationInsights": "00000000-0000-0000-0000-000000000000",
+                    "ApplicationInsightsProfiler": "00000000-0000-0000-0000-000000000000",
                     "EventHub": {
                         "Url": "https://myeventhub-ns.servicebus.windows.net/diageventhub",
                         "SharedAccessKeyName": "SendRule",
@@ -253,6 +254,7 @@ var wadcfgConfigPrototype = {
       <SinksConfig>
         <Sink name="applicationInsights">
           <ApplicationInsights>00000000-0000-0000-0000-000000000000</ApplicationInsights>
+          <ApplicationInsightsProfiler>00000000-0000-0000-0000-000000000000</ApplicationInsightsProfiler>
           <EventHub Url="https://myeventhub-ns.servicebus.windows.net/diageventhub" SharedAccessKeyName="SendRule" usePublisherId="false" />
           <StorageAccount name="myAdditionalStorageAccount" endpoint="https://core.windows.net" />
           <Channels>
