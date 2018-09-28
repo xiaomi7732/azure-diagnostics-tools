@@ -194,7 +194,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
             parser.parse(->(json_content) {
               content_length += json_content.length
 
-              enqueue_content(queue, json_content, header, tail)
+              enqueue_content(queue, json_content, header, tail, blob_name)
 
               on_entry_processed(start_index, content_length, blob_name, new_etag, gen)
             }, ->(malformed_json) {
@@ -208,7 +208,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
               content, are_more_bytes_available = blob_reader.read
 
               content_length += content.length
-              enqueue_content(queue, content, header, tail)
+              enqueue_content(queue, content, header, tail, blob_name)
 
               on_entry_processed(start_index, content_length, blob_name, new_etag, gen)
             end until !are_more_bytes_available || content.nil?
@@ -224,7 +224,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
     end # begin
   end # process
 
-  def enqueue_content(queue, content, header, tail)
+  def enqueue_content(queue, content, header, tail, blob_name)
     if (header.nil? || header.length == 0) && (tail.nil? || tail.length == 0)
       #skip some unnecessary copying
       full_content = content
@@ -236,6 +236,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
     end
 
     @codec.decode(full_content) do |event|
+      event.set("azureblobpath", blob_name)
       decorate(event)
       queue << event
     end
