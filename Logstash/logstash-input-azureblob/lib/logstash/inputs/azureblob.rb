@@ -240,8 +240,8 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
     end
 
     @codec.decode(full_content) do |event|
-      if azure_blob_file_path_field
-        event.set(azure_blob_file_path_field_name, blob_name)
+      if @azure_blob_file_path_field
+        event.set(@azure_blob_file_path_field_name, blob_name)
       end
       decorate(event)
       queue << event
