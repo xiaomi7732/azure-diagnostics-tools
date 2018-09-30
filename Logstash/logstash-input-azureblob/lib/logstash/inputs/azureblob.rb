@@ -122,6 +122,10 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
 
   # The default is 4 MB
   config :file_chunk_size_bytes, :validate => :number, :default => 4 * 1024 * 1024
+  
+  config :azure_blob_file_path_field, :validate => :boolean, :default => false
+  
+  config :azure_blob_file_path_field_name, :validate => :string, :default => "azureblobfilepath"
 
   # Constant of max integer
   MAX = 2**([42].pack('i').size * 16 - 2) - 1
@@ -236,7 +240,9 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
     end
 
     @codec.decode(full_content) do |event|
-      event.set("azureblobpath", blob_name)
+      if azure_blob_file_path_field
+        event.set(azure_blob_file_path_field_name, blob_name)
+      end
       decorate(event)
       queue << event
     end
