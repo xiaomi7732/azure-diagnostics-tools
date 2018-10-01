@@ -70,7 +70,15 @@ Specifies the header of the file in bytes that does not repeat over records. Usu
 
 __*file_tail_bytes*__
   
-Specifies the tail of the file that does not repeat over records. Usually, these are json closing tags. The defaul tvalue is `0`.
+Specifies the tail of the file that does not repeat over records. Usually, these are json closing tags. The default value is `0`.
+
+__*azure_blob_file_path_field*__
+
+Specifies whether or not to output the full path of the blob within the Azure Blob container as a field on each event
+
+__*azure_blob_file_path_field_name*__
+
+Define the name of the field that will be emitted in the event when `azure_blob_file_path_field` is true
 
 ### Advanced tweaking parameters
 

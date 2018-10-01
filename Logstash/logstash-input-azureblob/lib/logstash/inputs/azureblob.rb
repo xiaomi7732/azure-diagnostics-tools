@@ -122,6 +122,10 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
 
   # The default is 4 MB
   config :file_chunk_size_bytes, :validate => :number, :default => 4 * 1024 * 1024
+  
+  config :azure_blob_file_path_field, :validate => :boolean, :default => false
+  
+  config :azure_blob_file_path_field_name, :validate => :string, :default => "azureblobfilepath"
 
   # Constant of max integer
   MAX = 2**([42].pack('i').size * 16 - 2) - 1
@@ -194,7 +198,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
             parser.parse(->(json_content) {
               content_length += json_content.length
 
-              enqueue_content(queue, json_content, header, tail)
+              enqueue_content(queue, json_content, header, tail, blob_name)
 
               on_entry_processed(start_index, content_length, blob_name, new_etag, gen)
             }, ->(malformed_json) {
@@ -208,7 +212,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
               content, are_more_bytes_available = blob_reader.read
 
               content_length += content.length
-              enqueue_content(queue, content, header, tail)
+              enqueue_content(queue, content, header, tail, blob_name)
 
               on_entry_processed(start_index, content_length, blob_name, new_etag, gen)
             end until !are_more_bytes_available || content.nil?
@@ -224,7 +228,7 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
     end # begin
   end # process
 
-  def enqueue_content(queue, content, header, tail)
+  def enqueue_content(queue, content, header, tail, blob_name)
     if (header.nil? || header.length == 0) && (tail.nil? || tail.length == 0)
       #skip some unnecessary copying
       full_content = content
@@ -236,6 +240,9 @@ class LogStash::Inputs::LogstashInputAzureblob < LogStash::Inputs::Base
     end
 
     @codec.decode(full_content) do |event|
+      if @azure_blob_file_path_field
+        event.set(@azure_blob_file_path_field_name, blob_name)
+      end
       decorate(event)
       queue << event
     end
