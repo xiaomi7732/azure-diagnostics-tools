@@ -70,7 +70,7 @@ class LogStash::Outputs::ApplicationInsights < LogStash::Outputs::Base
   def get_field(event, field_name)
     return nil if field_name.nil?
     
-    field = event[field_name] # Extracts specified field value as the AI Message.
+    field = event.get(field_name) # Extracts specified field value as the AI Message.
     @logger.warn("#{field_name} not found in event data.") if field.nil?
     event.remove(field_name) unless field.nil?  # Removes the duplicated AI field.
     field
@@ -88,7 +88,7 @@ class LogStash::Outputs::ApplicationInsights < LogStash::Outputs::Base
   def get_ai_severity(event)
     return nil if @ai_severity_level_field.nil? 
 
-    severity_value = event[@ai_severity_level_field]
+    severity_value = event.get(@ai_severity_level_field)
 
     if !@ai_severity_level_mapping.nil? && @ai_severity_level_mapping.any?
       ai_severity_level = @ai_severity_level_mapping.fetch(severity_value, nil)
