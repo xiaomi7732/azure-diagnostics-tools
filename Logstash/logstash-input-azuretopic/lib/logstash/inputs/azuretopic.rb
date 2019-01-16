@@ -19,6 +19,7 @@ class LogStash::Inputs::Azuretopic < LogStash::Inputs::Base
   config :subscription, :validate => :string
   config :topic, :validate => :string
   config :deliverycount, :validate => :number, :default => 10
+  config :metadata_enabled, :validate => :boolean, :default => false
 
   def initialize(*args)
   super(*args)
@@ -48,6 +49,27 @@ class LogStash::Inputs::Azuretopic < LogStash::Inputs::Base
     if message
       codec.decode(message.body) do |event|
         decorate(event)
+        if @metadata_enabled
+            event.set("[@metadata][headers]", { 
+                    :content_type => message.content_type,
+                    :correlation_id => message.correlation_id,
+                    :session_id => message.session_id,
+                    :delivery_count => message.delivery_count,
+                    :locked_until_utc => message.locked_until_utc,
+                    :lock_token => message.lock_token,
+                    :message_id => message.message_id,
+                    :label => message.label,
+                    :reply_to => message.reply_to,
+                    :enqueued_time_utc => message.enqueued_time_utc,
+                    :sequence_number => message.sequence_number,
+                    :time_to_live => message.time_to_live,
+                    :to => message.to,
+                    :scheduled_enqueue_time_utc => message.scheduled_enqueue_time_utc,
+                    :reply_to_session_id => message.reply_to_session_id,
+                    :location => message.location.to_s
+                })
+            event.set("[@metadata][properties]", message.properties || {})
+        end
         output_queue << event
       end # codec.decode
       @azure_service_bus.delete_subscription_message(message)
