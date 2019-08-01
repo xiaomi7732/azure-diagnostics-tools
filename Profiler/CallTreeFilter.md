@@ -1,7 +1,5 @@
 # The call tree filter
 
-## Introduction
-
 ![Introduction](./media/intro.gif)
 
 ## Why the filter
