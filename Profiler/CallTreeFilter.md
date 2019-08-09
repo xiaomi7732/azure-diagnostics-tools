@@ -54,4 +54,4 @@ To find out the raw label, hover the mouse over the text:
 
 ## Moving forward
 
-We are looking into providing better presets of filters as well as better ways to add/remove filters. Please leave us a comment on the GitHub if there's suggestions for the filters.
+We are looking into providing better presets of filters as well as better ways to add/remove filters. Please feel free to [open issues on the GitHub](https://github.com/Azure/azure-diagnostics-tools/issues) if there's suggestions for the filters.
